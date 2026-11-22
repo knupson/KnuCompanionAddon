@@ -3,7 +3,8 @@ math.randomseed = nil
 -- Reloj determinista: avanzar dispara únicamente los callbacks ya vencidos.
 FAKE = {}
 function FAKE.Reset()
-    Syndicator, SYNDICATOR_DATA = nil, nil
+    Syndicator, SYNDICATOR_DATA, C_TooltipInfo = nil, nil, nil
+    FAKE.name, FAKE.class, FAKE.race, FAKE.ilvl, FAKE.locale = "Yaestoy Muerto", "PALADIN", "Humano", 32.16, "esMX"
     FAKE.equip, FAKE.money, FAKE.level, FAKE.zone, FAKE.subzone = {}, 123456, 31, "Ventormenta", "Distrito"
     FAKE.now, FAKE.timers, FAKE.lines, FAKE.chat, FAKE.handlers = 0, {}, {}, {}, {}
     FAKE.items, FAKE.sizes, FAKE.names, FAKE.calls = {}, {[0]=4, [1]=0, [2]=0, [3]=0, [4]=0, [5]=0}, {}, 0
@@ -98,3 +99,9 @@ function FAKE.Syndicator(ready, character)
     assert(loadfile('Core.lua'))('WOWCompanion', FAKE.ns)
 end
 function FAKE.Callback(event, ...) FAKE.callbacks[event](FAKE.ns, ...) end
+
+function UnitName() return FAKE.name end
+function UnitClass() return 'Paladín', FAKE.class end
+function UnitRace() return FAKE.race, 'Human' end
+function GetAverageItemLevel() return 999, FAKE.ilvl end
+function GetLocale() return FAKE.locale end

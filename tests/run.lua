@@ -46,7 +46,7 @@ end)
 test('secretos en todos los campos sin compararlos ni convertirlos', function()
     local S = FAKE.secret
     FAKE.Item({itemID=S,stackCount=S,quality=S,iconFileID=S,hyperlink=S})
-    iniciar(); igual(datos():match('#(.*)'), '0,1,,,,,')
+    iniciar(); igual(datos():match('#(.*)'), '0,1,,,,,,')
 end)
 test('tabla de objeto y tamaño secretos', function()
     FAKE.items['0:1'], FAKE.sizes[1], FAKE.sizes[5] = FAKE.secret, FAKE.secret, FAKE.secret
@@ -187,7 +187,7 @@ test('equipo agota tres intentos sin calidad', function()
 end)
 test('personaje escapa zona y sanitiza oro secreto', function()
     FAKE.money=FAKE.secret; FAKE.zone='Zona|con,coma'; iniciar()
-    assert(FAKE.Photos('char')[1].text:find('31,,Zona\\pcon\\ccoma,Distrito#',1,true))
+    assert(FAKE.Photos('char')[1].text:find('31,,Zona\\pcon\\ccoma,Distrito,Yaestoy Muerto,PALADIN,Humano,32.2#',1,true))
     FAKE.money=42; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(1)
     igual(#FAKE.Photos('char'),2); igual(#FAKE.Photos('bags'),1)
 end)
@@ -205,5 +205,189 @@ test('mensajes castellanos aun con cliente en inglés', function()
     igual(FAKE.ns.L['Enabled'],'Activado')
     igual(FAKE.ns.L['Log write failed'],'Falló la escritura al log')
 end)
+
+local function ActivarTips(fn)
+    C_TooltipInfo = {GetBagItem=fn, GetInventoryItem=fn, GetHyperlink=fn}
+end
+local function UnTip(texto)
+    return {lines={{leftText=texto or 'Nombre', rightText='Derecha',
+        leftColor={GenerateHexColor=function() return 'ffa335ee' end}}}}
+end
+local function Link(id) return '|Hitem:' .. id .. ':0:0:31|h[Objeto]|h' end
+
+test('itemString completo en bolsas equipo y banco', function()
+    FAKE.Syndicator(true,'Actual')
+    local link = Link(100)
+    FAKE.Item({itemID=100,hyperlink=link})
+    FAKE.equip[1]={id=100,quality=4,link=link}
+    SYNDICATOR_DATA.Characters.Actual = {bankTabs={{slots={{itemID=100,itemLink=link}}}}}
+    local llamadas = {}
+    ActivarTips(function(a,b) llamadas[#llamadas+1]={a,b}; return UnTip() end)
+    iniciar()
+    for _, tipo in ipairs({'bags','bank','equip'}) do assert(FAKE.Photos(tipo)[1].text:find(',item:100:0:0:31',1,true)) end
+    igual(#FAKE.Photos('tip'),1); igual(#llamadas,1)
+    assert(FAKE.Photos('tip')[1].text:find('#esMX\\pitem:100:0:0:31,1,1,Nombre,Derecha,a335ee,',1,true))
+    FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),1)
+    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),2)
+end)
+
+test('API exacta de tooltip para cada origen', function()
+    FAKE.Syndicator(true,'Actual')
+    FAKE.Item({itemID=1,hyperlink=Link(1)})
+    FAKE.equip[16]={id=2,quality=2,link=Link(2)}
+    SYNDICATOR_DATA.Characters.Actual={bankTabs={{slots={{itemID=3,itemLink=Link(3)}}}}}
+    local llamadas = 0
+    C_TooltipInfo={
+        GetBagItem=function(a,b) igual(a,0); igual(b,1); llamadas=llamadas+1; return UnTip() end,
+        GetInventoryItem=function(a,b) igual(a,'player'); igual(b,16); llamadas=llamadas+1; return UnTip() end,
+        GetHyperlink=function(a) igual(a,Link(3)); llamadas=llamadas+1; return UnTip() end}
+    iniciar(); igual(llamadas,3)
+end)
+
+test('tooltip vacío reintenta hasta cargar y agota tres intentos', function()
+    FAKE.Item({itemID=1,hyperlink=Link(1)})
+    local llamadas=0
+    ActivarTips(function() llamadas=llamadas+1; return {lines={}} end)
+    iniciar(); igual(#FAKE.Photos('tip'),0)
+    FAKE.Advance(2); igual(llamadas,2)
+    ActivarTips(function() llamadas=llamadas+1; return UnTip() end)
+    FAKE.Advance(2); igual(#FAKE.Photos('tip'),1); igual(llamadas,3); igual(#FAKE.timers,0)
+    SlashCmdList.WOWC('send'); ActivarTips(function() return nil end); FAKE.Advance(20)
+    igual(#FAKE.timers,0)
+end)
+
+test('tooltip sanitiza campos secretos y recorta 30 líneas UTF-8 antes de escapar', function(P)
+    FAKE.Item({itemID=1,hyperlink=Link(1)})
+    ActivarTips(function()
+        local lines={}
+        for i=1,40 do lines[i]={leftText=string.rep('ñ|,;#',100),rightText=string.rep('中\\',100)} end
+        lines[2]={leftText=FAKE.secret,rightText=FAKE.secret,leftColor=FAKE.secret,
+            rightColor={GenerateHexColor=function() return FAKE.secret end}}
+        return {lines=lines}
+    end)
+    iniciar()
+    local partes=FAKE.Photos('tip'); assert(#partes<=12)
+    local datos={}
+    for _,linea in ipairs(partes) do assert(#linea.text<=3900); datos[#datos+1]=linea.text:match('|tip|(.*)') end
+    local payload=table.concat(datos)
+    assert(payload:find(',30,30,',1,true)); assert(not payload:find(',31,30,',1,true))
+    assert(payload:find(',2,30,,,,',1,true))
+    assert(payload:find(P.Escape(P.Recortar(string.rep('ñ|,;#',100),200)),1,true))
+end)
+
+test('100 tooltips salen en tandas de hasta 12 partes con relleno único y fotos primero', function()
+    FAKE.sizes[0]=100
+    for i=1,100 do FAKE.items['0:'..i]={itemID=i,hyperlink=Link(i)} end
+    ActivarTips(function() return UnTip() end)
+    iniciar(); igual(#FAKE.Photos('tip'),12)
+    FAKE.Advance(30); igual(#FAKE.Photos('tip'),100); igual(#FAKE.timers,0); igual(FAKE.maxTimers,1)
+    local tandas={}
+    for _,linea in ipairs(FAKE.lines) do
+        local t=tandas[linea.time] or {tips=0,relleno=0,yaTip=false}
+        if linea.text:find('|tip|',1,true) then t.tips=t.tips+1; t.yaTip=true
+        elseif linea.text:match('^KCP') then t.relleno=t.relleno+1
+        else assert(not t.yaTip) end
+        if linea.text:match('^KC1|') then
+            local total=tonumber(linea.text:match('^KC1|%x+|%d+|%d+|(%d+)|')); assert(total<=64)
+        end
+        tandas[linea.time]=t
+    end
+    local anterior
+    for tiempo=1,31 do
+        local t=tandas[tiempo]
+        if t then assert(t.tips<=12); igual(t.relleno,12); if anterior then assert(tiempo-anterior>=1) end; anterior=tiempo end
+    end
+end)
+
+test('fallo de parte tip y fallo de relleno no confirman el envío', function()
+    FAKE.Item({itemID=1,hyperlink=Link(1)})
+    ActivarTips(function() return UnTip() end)
+    FAKE.failAt=5; iniciar(); igual(#FAKE.Photos('tip'),0)
+    FAKE.failAt=19; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
+    FAKE.failAt=nil; FAKE.Advance(2); igual(#FAKE.Photos('tip'),2)
+    FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),2)
+    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),3)
+end)
+
+test('char ocho campos con equipado decimal y escalares secretos', function()
+    FAKE.name, FAKE.class, FAKE.race, FAKE.ilvl = FAKE.secret, FAKE.secret, FAKE.secret, FAKE.secret
+    iniciar(); assert(FAKE.Photos('char')[1].text:find('31,123456,Ventormenta,Distrito,,,,#',1,true))
+    FAKE.ilvl=15.67; FAKE.Event('PLAYER_EQUIPMENT_CHANGED'); FAKE.Advance(1)
+    assert(FAKE.Photos('char')[2].text:find(',15.7#',1,true))
+end)
+
+
+test('tandas con 100 tooltips de tamaño máximo respetan presupuesto y no cortan registros', function(P)
+    FAKE.sizes[0]=100
+    for i=1,100 do FAKE.items['0:'..i]={itemID=i,hyperlink=Link(i)} end
+    local texto=string.rep('|,;#',50)
+    ActivarTips(function()
+        local lines={}
+        for i=1,30 do lines[i]={leftText=texto,rightText=texto} end
+        return {lines=lines}
+    end)
+    iniciar(); FAKE.Advance(220)
+    local tandas, mensajes={},{}
+    for _,linea in ipairs(FAKE.Photos('tip')) do
+        assert(#linea.text<=3900)
+        tandas[linea.time]=(tandas[linea.time] or 0)+1
+        assert(tandas[linea.time]<=12)
+        local seq,parte,total,payload=linea.text:match('^KC1|%x+|(%d+)|(%d+)|(%d+)|tip|(.*)$')
+        assert(tonumber(total)<=64)
+        mensajes[seq]=mensajes[seq] or {}
+        mensajes[seq][tonumber(parte)]=payload
+        -- Cada registro queda entero; una parte posterior conserva el separador inicial.
+        if tonumber(parte)>1 then igual(payload:sub(1,1),';') end
+    end
+    local cantidad=0
+    for _,partes in pairs(mensajes) do
+        cantidad=cantidad+1
+        local payload=table.concat(partes)
+        assert(payload:find(',30,30,',1,true))
+        assert(payload:find(P.Escape(texto),1,true))
+    end
+    igual(cantidad,100); igual(#FAKE.timers,0)
+end)
+
+test('tooltip vacío de una casilla que cambió no se asigna al objeto anterior', function()
+    FAKE.Item({itemID=1,hyperlink=Link(1)})
+    ActivarTips(function() return nil end)
+    iniciar()
+    FAKE.Item({itemID=2,hyperlink=Link(2)})
+    ActivarTips(function() return UnTip('Segundo') end)
+    FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(10)
+    local tips=FAKE.Photos('tip'); igual(#tips,1)
+    assert(tips[1].text:find('item:2:',1,true)); assert(not tips[1].text:find('item:1:',1,true))
+end)
+
+test('tooltip diferido conserva el contenido de su foto aunque cambie la casilla', function()
+    FAKE.sizes[0]=13
+    for i=1,13 do FAKE.items['0:'..i]={itemID=i,hyperlink=Link(i)} end
+    local texto='Primero'
+    ActivarTips(function() return UnTip(texto) end)
+    iniciar(); igual(#FAKE.Photos('tip'),12)
+    texto='Segundo'
+    FAKE.items['0:13']={itemID=100,hyperlink=Link(100)}
+    FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(5)
+    local viejo,nuevo
+    for _,linea in ipairs(FAKE.Photos('tip')) do
+        if linea.text:find('item:13:',1,true) then viejo=linea.text end
+        if linea.text:find('item:100:',1,true) then nuevo=linea.text end
+    end
+    assert(viejo:find(',Primero,',1,true)); assert(nuevo:find(',Segundo,',1,true))
+end)
+
+
+test('eventos de fotos no adelantan el plazo de reintento de tooltips', function()
+    FAKE.Item({itemID=1,hyperlink=Link(1)})
+    local tiempos={}
+    ActivarTips(function() tiempos[#tiempos+1]=GetTime(); return nil end)
+    iniciar()
+    FAKE.money=1; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(1)
+    igual(#tiempos,1)
+    FAKE.Advance(10); igual(#tiempos,3)
+    assert(tiempos[2]-tiempos[1]>=2); assert(tiempos[3]-tiempos[2]>=2)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

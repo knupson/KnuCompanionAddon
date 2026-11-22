@@ -1,0 +1,69 @@
+-- Reloj determinista: avanzar dispara únicamente los callbacks ya vencidos.
+FAKE = {}
+function FAKE.Reset()
+    FAKE.now, FAKE.timers, FAKE.lines, FAKE.chat, FAKE.handlers = 0, {}, {}, {}, {}
+    FAKE.items, FAKE.sizes, FAKE.names, FAKE.calls = {}, {[0]=4, [1]=0, [2]=0, [3]=0, [4]=0, [5]=0}, {}, 0
+    FAKE.fail, FAKE.maxTimers, FAKE.failAt = false, 0, nil
+    canaccessvalue = function(v) return not rawequal(v, FAKE.secret) end
+    issecretvalue = function(v) return rawequal(v, FAKE.secret) end
+    SlashCmdList, NUM_BAG_SLOTS = {}, 4
+    FAKE.ns = {}
+    assert(loadfile('Locales/Locales.lua'))('WOWCompanion', FAKE.ns)
+    assert(loadfile('Proto.lua'))('WOWCompanion', FAKE.ns)
+    assert(loadfile('Core.lua'))('WOWCompanion', FAKE.ns)
+end
+FAKE.secret = setmetatable({}, {
+    __tostring=function() error('Se convirtió un secreto') end,
+    __concat=function() error('Se concatenó un secreto') end,
+    __lt=function() error('Se comparó un secreto') end,
+    __le=function() error('Se comparó un secreto') end,
+    __eq=function() error('Se comparó un secreto') end,
+    __index=function() error('Se leyó un secreto') end,
+})
+function GetTime() return FAKE.now end
+function GetServerTime() return 1795366800 end
+function debugprofilestop() return FAKE.now * 1000 end
+C_Timer = { After = function(delay, fn)
+    FAKE.timers[#FAKE.timers + 1] = {at=FAKE.now + delay, fn=fn}
+    FAKE.maxTimers = math.max(FAKE.maxTimers, #FAKE.timers)
+end }
+C_Container = {
+    GetContainerNumSlots=function(bag) return FAKE.sizes[bag] end,
+    GetContainerItemInfo=function(bag, slot) return FAKE.items[bag .. ':' .. slot] end,
+}
+C_Item = {GetItemInfo=function(id) return FAKE.names[id] end}
+C_Log = {LogMessage=function(line)
+    FAKE.calls = FAKE.calls + 1
+    if FAKE.fail or FAKE.failAt == FAKE.calls then error('Fallo simulado') end
+    FAKE.lines[#FAKE.lines + 1] = {text=line, time=FAKE.now}
+end}
+local KL = {}
+function KL:NewLocale(es) return setmetatable(es, {__index=function(_, k) return k end}) end
+function KL:NewPrinter() return function(s) FAKE.chat[#FAKE.chat + 1] = s end end
+function KL:NewEvents()
+    return {On=function(_, event, fn) FAKE.handlers[event] = fn end}
+end
+function KL:OnLogin(fn) fn() end
+function KL:RegisterCommand(name, handler, help) FAKE.command, FAKE.commandName = handler, name end
+function LibStub(name) assert(name == 'KnuLib-1.0'); return KL end
+function FAKE.Event(event) assert(FAKE.handlers[event])() end
+function FAKE.Advance(delta)
+    local target = FAKE.now + delta
+    while true do
+        local index, at
+        for i, timer in ipairs(FAKE.timers) do
+            if timer.at <= target and (not at or timer.at < at) then index, at = i, timer.at end
+        end
+        if not index then break end
+        local timer = table.remove(FAKE.timers, index)
+        FAKE.now = at; timer.fn()
+    end
+    FAKE.now = target
+end
+function FAKE.Item(fields) FAKE.items['0:1'] = fields or {itemID=248689, stackCount=2, quality=3, iconFileID=134400,
+    hyperlink='|cnIQ1:|Hitem:248689::::::::31:1486:::::::::|h[Cajón arrebatado: Curiosidades de oficial]|h|r'} end
+function FAKE.Photos()
+    local result = {}
+    for _, line in ipairs(FAKE.lines) do if line.text:match('^KC1|') then result[#result+1] = line end end
+    return result
+end

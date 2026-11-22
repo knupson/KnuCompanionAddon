@@ -1,0 +1,13 @@
+## Interface: 16001
+## Title: |cffecd9bdKNU|r|cffffa82eCompañon|r
+## Notes: Live bag companion
+## Notes-esES: Mirá tus bolsas en vivo desde el escritorio
+## Notes-esMX: Mirá tus bolsas en vivo desde el escritorio
+## Author: Knunet
+## Version: 0.1.0
+## X-License: MIT
+
+Libs\KnuLib\KnuLib.xml
+Locales\Locales.lua
+Proto.lua
+Core.lua

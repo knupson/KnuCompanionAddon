@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char"}
+local tipos = {"bags", "bank", "equip", "char", "look"}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
 local ultimoEnvio, ultimoVolcado, fallo
@@ -177,7 +177,7 @@ local function Personaje()
         P.Escape(Texto(claseArchivo) or ''), P.Escape(P.Recortar(Texto(raza) or '', 200)), decimal,
         raceID or '', sexo or ''}, ','), {}
 end
-local fotos = {bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje}
+local fotos = {bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look}
 local Pedir
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
@@ -278,7 +278,7 @@ Pedir = function(motivo, tipo)
     if not tipo then for _, t in ipairs(tipos) do Pedir(motivo, t) end; return end
     local plazoAnterior = sucio[tipo] and despues[tipo]
     sucio[tipo] = true
-    if motivo == 'send' or motivo == 'retry' then forzar[tipo] = true end
+    if motivo == 'send' or motivo == 'retry' or (motivo == 'world' and tipo == 'look') then forzar[tipo] = true end
     if motivo ~= 'retry' then intentos[tipo], despues[tipo] = 0, GetTime() + 1
     else despues[tipo] = GetTime() + 2 end
     if plazoAnterior then despues[tipo] = math.min(plazoAnterior, despues[tipo]) end
@@ -318,7 +318,10 @@ local function Comando(msg)
     else Print(L['Usage: /wowc on | off | send | status']) end
 end
 local events = KL:NewEvents()
-events:On('PLAYER_ENTERING_WORLD', function() Pedir('world') end)
+events:On('PLAYER_ENTERING_WORLD', function() ns.LookEvent('PLAYER_ENTERING_WORLD'); Pedir('world') end)
+for _, event in ipairs({'BARBER_SHOP_OPEN', 'BARBER_SHOP_APPEARANCE_APPLIED', 'BARBER_SHOP_CLOSE'}) do
+    events:On(event, function() ns.LookEvent(event); Pedir('event', 'look') end)
+end
 events:On('BAG_UPDATE_DELAYED', function() Pedir('event', 'bags') end)
 events:On('PLAYER_EQUIPMENT_CHANGED', function() Pedir('event', 'equip'); Pedir('event', 'char') end)
 events:On('UNIT_INVENTORY_CHANGED', function(unit)
@@ -328,6 +331,7 @@ for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'ZONE_CHANGED', 'ZON
     events:On(evento, function() Pedir('event', 'char') end)
 end
 KL:OnLogin(function()
+    ns.InitLook()
     if Syndicator and Syndicator.CallbackRegistry then
         Syndicator.CallbackRegistry:RegisterCallback('Ready', function() Pedir('ready', 'bank') end, ns)
         Syndicator.CallbackRegistry:RegisterCallback('BagCacheUpdate', function(_, personaje, cambios)

@@ -14,8 +14,10 @@ function FAKE.Reset()
     issecretvalue = function(v) return rawequal(v, FAKE.secret) end
     SlashCmdList, NUM_BAG_SLOTS = {}, 4
     FAKE.ns = {}
+    WOWCompanionDB, C_BarberShop = nil, nil
     assert(loadfile('Locales/Locales.lua'))('WOWCompanion', FAKE.ns)
     assert(loadfile('Proto.lua'))('WOWCompanion', FAKE.ns)
+    assert(loadfile('Look.lua'))('WOWCompanion', FAKE.ns)
     assert(loadfile('Core.lua'))('WOWCompanion', FAKE.ns)
 end
 FAKE.secret = setmetatable({}, {
@@ -107,3 +109,6 @@ function UnitRace() return FAKE.race, 'Human', FAKE.raceID end
 function UnitSex() return FAKE.sex end
 function GetAverageItemLevel() return 999, FAKE.ilvl end
 function GetLocale() return FAKE.locale end
+
+function UnitGUID() return "Player-TEST-" .. (type(FAKE.name) == "string" and FAKE.name or "secreto") end
+function GetRealmName() return "Prueba" end

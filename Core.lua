@@ -14,9 +14,9 @@ local function Texto(v)
     v = Limpiar(v)
     if type(v) == 'string' then return v end
 end
+-- Forever no tiene math.randomseed (medido 2026-11-22: type = nil); math.random ya viene sembrado.
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
-math.randomseed((server + math.floor(perfil)) % 2147483647)
-local sid = string.format('%08x', (server + math.random(0, 2147483646)) % 4294967296)
+local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
 local tipos = {"bags", "bank", "equip", "char"}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}

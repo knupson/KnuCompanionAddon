@@ -1,3 +1,5 @@
+-- Forever no tiene math.randomseed (medido en el juego 2026-11-22): el stub la saca para que los tests fallen si se usa.
+math.randomseed = nil
 -- Reloj determinista: avanzar dispara únicamente los callbacks ya vencidos.
 FAKE = {}
 function FAKE.Reset()

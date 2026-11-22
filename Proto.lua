@@ -26,11 +26,12 @@ function P.Recortar(s, limite)
 end
 
 -- Cada parte conserva los separadores: al concatenarlas se recupera la foto exacta.
-function P.Partes(sid, seq, bolsas, registros)
+function P.Partes(sid, seq, tipo, encabezado, registros)
     local cab = 'KC1|' .. sid .. '|' .. seq .. '|'
-    local presupuesto = 3900 - #(cab .. '64|64|bags|')
-    local partes, actual = {}, bolsas .. '#'
-    assert(#actual <= presupuesto, 'Tamaños de bolsa demasiado largos')
+    assert(type(tipo) == 'string' and #tipo <= 16 and tipo:match('^[a-z]+$'), 'Tipo inválido')
+    local presupuesto = 3900 - #(cab .. '64|64|' .. tipo .. '|')
+    local partes, actual = {}, encabezado .. '#'
+    assert(#actual <= presupuesto, 'Encabezado demasiado largo')
     for i, registro in ipairs(registros) do
         local pieza = (i > 1 and ';' or '') .. registro
         assert(#pieza <= presupuesto, 'Registro demasiado largo')
@@ -39,7 +40,7 @@ function P.Partes(sid, seq, bolsas, registros)
     end
     partes[#partes + 1] = actual
     assert(#partes <= 64, 'Demasiadas partes')
-    for i, datos in ipairs(partes) do partes[i] = cab .. i .. '|' .. #partes .. '|bags|' .. datos end
+    for i, datos in ipairs(partes) do partes[i] = cab .. i .. '|' .. #partes .. '|' .. tipo .. '|' .. datos end
     return partes
 end
 

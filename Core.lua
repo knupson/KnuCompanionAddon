@@ -159,7 +159,10 @@ end
 
 local function Personaje()
     local _, claseArchivo = UnitClass('player')
-    local raza = UnitRace('player')
+    local raza, _, raceID = UnitRace('player')
+    raceID = Numero(raceID)
+    local sexo = Numero(UnitSex('player'))
+    sexo = (sexo == 2 and 0) or (sexo == 3 and 1) or nil
     local _, equipado = GetAverageItemLevel()
     equipado = Limpiar(equipado)
     local decimal = ''
@@ -171,7 +174,8 @@ local function Personaje()
         P.Escape(P.Recortar(Texto(GetZoneText()) or '', 200)),
         P.Escape(P.Recortar(Texto(GetSubZoneText()) or '', 200)),
         P.Escape(P.Recortar(Texto(UnitName('player')) or '', 200)),
-        P.Escape(Texto(claseArchivo) or ''), P.Escape(P.Recortar(Texto(raza) or '', 200)), decimal}, ','), {}
+        P.Escape(Texto(claseArchivo) or ''), P.Escape(P.Recortar(Texto(raza) or '', 200)), decimal,
+        raceID or '', sexo or ''}, ','), {}
 end
 local fotos = {bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje}
 local Pedir

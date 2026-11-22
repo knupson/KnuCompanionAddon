@@ -187,7 +187,7 @@ test('equipo agota tres intentos sin calidad', function()
 end)
 test('personaje escapa zona y sanitiza oro secreto', function()
     FAKE.money=FAKE.secret; FAKE.zone='Zona|con,coma'; iniciar()
-    assert(FAKE.Photos('char')[1].text:find('31,,Zona\\pcon\\ccoma,Distrito,Yaestoy Muerto,PALADIN,Humano,32.2#',1,true))
+    assert(FAKE.Photos('char')[1].text:find('31,,Zona\\pcon\\ccoma,Distrito,Yaestoy Muerto,PALADIN,Humano,32.2,1,0#',1,true))
     FAKE.money=42; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(1)
     igual(#FAKE.Photos('char'),2); igual(#FAKE.Photos('bags'),1)
 end)
@@ -309,11 +309,17 @@ test('fallo de parte tip y fallo de relleno no confirman el envío', function()
     SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),3)
 end)
 
-test('char ocho campos con equipado decimal y escalares secretos', function()
+test('char usa raza numérica y sexo normalizado', function()
+    FAKE.raceID, FAKE.sex = 5, 3
+    iniciar(); assert(FAKE.Photos('char')[1].text:find(',32.2,5,1#',1,true))
+end)
+
+test('char diez campos con equipado decimal y escalares secretos', function()
     FAKE.name, FAKE.class, FAKE.race, FAKE.ilvl = FAKE.secret, FAKE.secret, FAKE.secret, FAKE.secret
-    iniciar(); assert(FAKE.Photos('char')[1].text:find('31,123456,Ventormenta,Distrito,,,,#',1,true))
+    FAKE.raceID, FAKE.sex = FAKE.secret, FAKE.secret
+    iniciar(); assert(FAKE.Photos('char')[1].text:find('31,123456,Ventormenta,Distrito,,,,,,#',1,true))
     FAKE.ilvl=15.67; FAKE.Event('PLAYER_EQUIPMENT_CHANGED'); FAKE.Advance(1)
-    assert(FAKE.Photos('char')[2].text:find(',15.7#',1,true))
+    assert(FAKE.Photos('char')[2].text:find(',15.7,,#',1,true))
 end)
 
 

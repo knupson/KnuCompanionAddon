@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello"}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
 local ultimoEnvio, ultimoVolcado, fallo
@@ -177,7 +177,17 @@ local function Personaje()
         P.Escape(Texto(claseArchivo) or ''), P.Escape(P.Recortar(Texto(raza) or '', 200)), decimal,
         raceID or '', sexo or ''}, ','), {}
 end
-local fotos = {bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look}
+local function Hello()
+    local version
+    if C_AddOns and C_AddOns.GetAddOnMetadata then
+        version = C_AddOns.GetAddOnMetadata('WOWCompanion', 'Version')
+    elseif GetAddOnMetadata then
+        version = GetAddOnMetadata('WOWCompanion', 'Version')
+    end
+    local _, _, _, interface = GetBuildInfo()
+    return P.Escape(version or '0.0.0') .. ',' .. tostring(interface), {}
+end
+local fotos = {hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look}
 local Pedir
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
@@ -278,7 +288,7 @@ Pedir = function(motivo, tipo)
     if not tipo then for _, t in ipairs(tipos) do Pedir(motivo, t) end; return end
     local plazoAnterior = sucio[tipo] and despues[tipo]
     sucio[tipo] = true
-    if motivo == 'send' or motivo == 'retry' or (motivo == 'world' and tipo == 'look') then forzar[tipo] = true end
+    if motivo == 'send' or motivo == 'retry' or (motivo == 'world' and (tipo == 'look' or tipo == 'hello')) then forzar[tipo] = true end
     if motivo ~= 'retry' then intentos[tipo], despues[tipo] = 0, GetTime() + 1
     else despues[tipo] = GetTime() + 2 end
     if plazoAnterior then despues[tipo] = math.min(plazoAnterior, despues[tipo]) end

@@ -9,7 +9,9 @@
 ## SavedVariables: WOWCompanionDB
 ## OptionalDeps: Syndicator
 ## X-License: MIT
+## X-Curse-Project-ID: 1826508
 ## X-Website: https://knunet.com
+## X-Category: Bags & Inventory
 
 Libs\KnuLib\KnuLib.xml
 Locales\Locales.lua

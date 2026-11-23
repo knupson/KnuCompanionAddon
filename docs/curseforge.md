@@ -1,31 +1,35 @@
-# KNU Companion
+KNU Companion needs the KNU Companion desktop app. On its own it shows nothing in game.
 
-Este addon necesita la app de escritorio KNU Companion. Solo, no muestra nada en el juego.
+Keep the app open on a second monitor and you see your bags, bank, gear and a map with your position, live, while you play.
 
-La app la abrís en otro monitor y ahí ves en vivo tus bolsas, el banco, el equipo y el mapa con tu posición mientras jugás.
+Get the app: https://github.com/knupson/KnuCompanion/releases/latest
+
+## What it sends to the app
+
+- Bags and gear, with the game's tooltips.
+- Bank, if you have Syndicator installed.
+- Level, gold, experience, zone and your character's look.
+- Your position on the map and the quests of the map you are on.
+- New mail alert, with the senders.
+
+The addon writes this to `Logs/General.log` in the game folder and the app reads it from there. The addon does not connect to the internet.
+
+If you already have the app, you do not need this page: the app ships the addon and installs it with its "Instalar addon" button.
+
+## Commands
+
+- `/wowc off`, `/wowc on`: stop or resume sending.
+- `/wowc gps off`, `/wowc gps on`: stop or resume the live position.
+- `/wowc send`: send everything again.
+- `/wowc status`: check that it is sending.
+- `/wowc app`: show where to get the app again.
+
+In game messages are in Spanish for now. Made for WoW Forever. MIT license.
+
+## En castellano
+
+Este addon necesita la app de escritorio KNU Companion. Solo, no muestra nada en el juego. La app la abrís en otro monitor y ahí ves en vivo tus bolsas, el banco, el equipo y el mapa con tu posición mientras jugás.
 
 Descarga de la app: https://github.com/knupson/KnuCompanion/releases/latest
 
-## Qué le pasa a la app
-
-- Bolsas y equipo, con los tooltips del juego.
-- Banco, si tenés Syndicator instalado. Sin Syndicator el banco queda vacío.
-- Nivel, oro, experiencia, zona y la apariencia del personaje.
-- Tu posición en el mapa y las misiones del mapa en el que estás.
-- Aviso de correo nuevo, con los remitentes.
-
-El addon escribe estos datos en `Logs/General.log`, dentro de la carpeta del juego, y la app los lee de ahí. El addon no se conecta a internet.
-
-## Si ya tenés la app
-
-La app trae el addon y lo instala con el botón «Instalar addon». No hace falta bajarlo de acá.
-
-## Comandos
-
-- `/wowc off` y `/wowc on`: apagar o prender el envío.
-- `/wowc gps off` y `/wowc gps on`: apagar o prender la posición en vivo.
-- `/wowc send`: mandar todo de nuevo.
-- `/wowc status`: ver si está mandando.
-- `/wowc app`: ver de nuevo de dónde se baja la app.
-
-Hecho para WoW Forever. Licencia MIT.
+Si ya tenés la app, no hace falta bajarlo de acá: la app trae el addon y lo instala con el botón «Instalar addon».

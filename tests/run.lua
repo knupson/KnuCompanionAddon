@@ -864,6 +864,22 @@ test('quest corta en 25 misiones y sin la API manda la lista vacía', function()
     FAKE.Reset(); Ubicar(); iniciar(); igual(QuestPayload(), '37,#')
 end)
 
+-- Auditoría de Gemini (2026-11-23): sin misión seguida el juego da 0, y la seguida podía quedar afuera del tope de 25.
+test('quest manda vacío sin misión seguida y siempre incluye la seguida', function()
+    Ubicar()
+    ConMisiones({{questID=5,x=0.5,y=0.5}}, {}, {}, 0, function()
+        iniciar(); igual(QuestPayload():match('^[^#]*'), '37,')
+    end)
+    FAKE.Reset(); Ubicar()
+    local lista = {}
+    for i=1,30 do lista[i]={questID=i,x=0.5,y=0.5} end
+    ConMisiones(lista, {}, {}, 30, function()
+        iniciar()
+        local payload = QuestPayload()
+        igual(payload:match('^[^#]*'), '37,30'); assert(payload:find('#30,0.5000',1,true))
+    end)
+end)
+
 local function MailPayload()
     local fotos=FAKE.Photos('mail')
     return fotos[#fotos].text:match('|mail|(.*)$')

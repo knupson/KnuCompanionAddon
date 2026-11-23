@@ -334,6 +334,8 @@ end
 local function Misiones()
     local map = Numero(C_Map.GetBestMapForUnit('player'))
     local seguida = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID and Numero(C_SuperTrack.GetSuperTrackedQuestID()) or nil
+    -- Sin misión seguida el juego devuelve 0: se manda vacío.
+    if seguida == 0 then seguida = nil end
     local registros = {}
     local lista = map and C_QuestLog and C_QuestLog.GetQuestsOnMap and Limpiar(C_QuestLog.GetQuestsOnMap(map))
     local function Coordenada(v)
@@ -341,9 +343,14 @@ local function Misiones()
         if v and v >= 0 and v <= 1 then return (string.format('%.4f', v):gsub(',', '.')) end
     end
     if type(lista) == 'table' then
+        -- Tope de 25, pero la misión seguida entra siempre para que la app dibuje la línea hacia ella.
+        local orden = {}
         for _, q in ipairs(lista) do
-            if #registros >= 25 then break end
             q = Limpiar(q)
+            if type(q) == 'table' and seguida and Numero(q.questID) == seguida then table.insert(orden, 1, q) else orden[#orden + 1] = q end
+        end
+        for _, q in ipairs(orden) do
+            if #registros >= 25 then break end
             local id = type(q) == 'table' and Numero(q.questID)
             local x, y = id and Coordenada(q.x), id and Coordenada(q.y)
             if id and id > 0 and x and y then

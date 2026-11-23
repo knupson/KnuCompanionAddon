@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log"}
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -331,6 +331,57 @@ local function Hello()
     return P.Escape(version or '0.0.0') .. ',' .. tostring(interface), {}
 end
 -- Misiones con objetivo en el mapa actual: posición, título y objetivos (probado en Forever el 2026-11-23).
+-- Grupos de 4 por objetivo (hasta 8): cumplidos, requeridos, terminado, texto. Lo comparten quest y log.
+local function Objetivos(id, campos)
+    local objetivos = C_QuestLog.GetQuestObjectives and Limpiar(C_QuestLog.GetQuestObjectives(id))
+    if type(objetivos) ~= 'table' then return end
+    for i = 1, math.min(#objetivos, 8) do
+        local o = Limpiar(objetivos[i])
+        if type(o) == 'table' then
+            campos[#campos + 1] = Numero(o.numFulfilled) or ''
+            campos[#campos + 1] = Numero(o.numRequired) or ''
+            campos[#campos + 1] = Limpiar(o.finished) == true and 1 or 0
+            campos[#campos + 1] = P.Escape(P.Recortar(Texto(o.text) or '', 120))
+        end
+    end
+end
+-- Una fila del registro de misiones: C_QuestLog.GetInfo o, en clientes viejos, GetQuestLogTitle (como KnuJunk/Player.lua).
+local function FilaRegistro(i)
+    if C_QuestLog.GetInfo then
+        local info = Limpiar(C_QuestLog.GetInfo(i))
+        if type(info) ~= 'table' then return nil end
+        return Texto(info.title), Numero(info.level), Limpiar(info.isHeader) == true, Limpiar(info.isCollapsed), Numero(info.questID)
+    elseif GetQuestLogTitle then
+        local titulo, nivel, _, cabecera, plegada, _, _, id = GetQuestLogTitle(i)
+        return Texto(titulo), Numero(nivel), Limpiar(cabecera) == true or Limpiar(cabecera) == 1, Limpiar(plegada), Numero(id)
+    end
+end
+-- Registro completo en su orden, hasta 35 misiones. Las que están bajo una categoría plegada el juego no las lista:
+-- el encabezado lleva cuántas categorías plegadas hay para que la app lo avise (no se despliegan solas).
+local function Registro()
+    local registros, plegadas = {}, 0
+    if not C_QuestLog or not (C_QuestLog.GetInfo or GetQuestLogTitle) then return '0', registros end
+    local total = C_QuestLog.GetNumQuestLogEntries and Numero((C_QuestLog.GetNumQuestLogEntries()))
+        or GetNumQuestLogEntries and Numero((GetNumQuestLogEntries())) or 0
+    local categoria = ''
+    for i = 1, math.min(total, 200) do
+        if #registros >= 35 then break end
+        local titulo, nivel, cabecera, plegada, id = FilaRegistro(i)
+        if cabecera then
+            categoria = P.Escape(P.Recortar(titulo or '', 120))
+            if plegada == true or (type(plegada) == 'number' and plegada ~= 0) then plegadas = plegadas + 1 end
+        elseif id and id > 0 then
+            local lista = C_QuestLog.ReadyForTurnIn and Limpiar(C_QuestLog.ReadyForTurnIn(id))
+            if lista == nil and C_QuestLog.IsComplete then lista = Limpiar(C_QuestLog.IsComplete(id)) end
+            local fallida = C_QuestLog.IsFailed and Limpiar(C_QuestLog.IsFailed(id))
+            local campos = {id, nivel or '', lista == true and 1 or 0, fallida == true and 1 or 0, categoria,
+                P.Escape(P.Recortar(titulo or '', 120))}
+            Objetivos(id, campos)
+            registros[#registros + 1] = table.concat(campos, ',')
+        end
+    end
+    return tostring(plegadas), registros
+end
 local function Misiones()
     local map = Numero(C_Map.GetBestMapForUnit('player'))
     local seguida = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID and Numero(C_SuperTrack.GetSuperTrackedQuestID()) or nil
@@ -357,18 +408,7 @@ local function Misiones()
                 local entregar = C_QuestLog.ReadyForTurnIn and Limpiar(C_QuestLog.ReadyForTurnIn(id))
                 local campos = {id, x, y, entregar == true and 1 or 0,
                     P.Escape(P.Recortar(C_QuestLog.GetTitleForQuestID and Texto(C_QuestLog.GetTitleForQuestID(id)) or '', 120))}
-                local objetivos = C_QuestLog.GetQuestObjectives and Limpiar(C_QuestLog.GetQuestObjectives(id))
-                if type(objetivos) == 'table' then
-                    for i = 1, math.min(#objetivos, 8) do
-                        local o = Limpiar(objetivos[i])
-                        if type(o) == 'table' then
-                            campos[#campos + 1] = Numero(o.numFulfilled) or ''
-                            campos[#campos + 1] = Numero(o.numRequired) or ''
-                            campos[#campos + 1] = Limpiar(o.finished) == true and 1 or 0
-                            campos[#campos + 1] = P.Escape(P.Recortar(Texto(o.text) or '', 120))
-                        end
-                    end
-                end
+                Objetivos(id, campos)
                 registros[#registros + 1] = table.concat(campos, ',')
             end
         end
@@ -401,7 +441,7 @@ local function Destino()
     return table.concat({map, (string.format('%.4f', x):gsub(',', '.')), (string.format('%.4f', y):gsub(',', '.')),
         Campo(uid.title), Campo(uid.from)}, ','), {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino}
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -613,7 +653,7 @@ for _, evento in ipairs({'UPDATE_PENDING_MAIL', 'MAIL_INBOX_UPDATE', 'MAIL_CLOSE
     events:On(evento, function() Pedir('event', 'mail') end)
 end
 for _, evento in ipairs({'QUEST_LOG_UPDATE', 'QUEST_WATCH_LIST_CHANGED', 'SUPER_TRACKING_CHANGED'}) do
-    events:On(evento, function() Pedir('event', 'quest') end)
+    events:On(evento, function() Pedir('event', 'quest'); Pedir('event', 'log') end)
 end
 -- Se registra al cargar (OptionalDeps: TomTom carga antes) para no perder el destino que restaura al entrar.
 if type(TomTom) == 'table' and type(TomTom.RegisterCallback) == 'function' then

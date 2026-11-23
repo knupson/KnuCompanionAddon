@@ -58,13 +58,13 @@ test('predicados de secretos y fallback', function(P)
     assert(not P.EsSecreto(1,nil,nil))
 end)
 test('foto inicial y doce líneas de relleno', function()
-    FAKE.Item(); iniciar(); igual(#FAKE.lines,22)
+    FAKE.Item(); iniciar(); igual(#FAKE.lines,23)
     assert(datos():find('Cajón arrebatado',1,true))
     assert(FAKE.lines[1].text:match('^KC1|%x%x%x%x%x%x%x%x|1|1|1|bags|'))
-    for i=11,22 do igual(#FAKE.lines[i].text,4089); igual(FAKE.lines[i].text:sub(1,3),'KCP') end
+    for i=12,23 do igual(#FAKE.lines[i].text,4089); igual(FAKE.lines[i].text:sub(1,3),'KCP') end
 end)
 test('sin cambios no hay datos ni relleno', function()
-    FAKE.Item(); iniciar(); FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.lines,22)
+    FAKE.Item(); iniciar(); FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.lines,23)
 end)
 test('ráfaga agrupa eventos en un timer', function()
     for _=1,100 do FAKE.Event('BAG_UPDATE_DELAYED') end
@@ -85,19 +85,19 @@ end)
 test('fallo reintenta dos veces y status informa', function()
     FAKE.fail=true; iniciar(); SlashCmdList.WOWC('status')
     assert(FAKE.chat[#FAKE.chat]:find('Falló',1,true))
-    FAKE.Advance(1.99); igual(FAKE.calls,22)
-    FAKE.Advance(20); igual(FAKE.calls,66); igual(#FAKE.timers,0); igual(FAKE.maxTimers,1)
+    FAKE.Advance(1.99); igual(FAKE.calls,23)
+    FAKE.Advance(20); igual(FAKE.calls,69); igual(#FAKE.timers,0); igual(FAKE.maxTimers,1)
 end)
 test('foto fallida no queda marcada como enviada', function()
     FAKE.fail=true; iniciar(); FAKE.fail=false; FAKE.Advance(2)
-    igual(#FAKE.Photos(),1); assert(FAKE.Photos()[1].text:find('|11|1|1|bags|',1,true))
+    igual(#FAKE.Photos(),1); assert(FAKE.Photos()[1].text:find('|12|1|1|bags|',1,true))
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos(),1)
 end)
 test('fallo en una parte conserva el reintento', function()
     FAKE.failAt=1; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),1)
 end)
 test('fallo de relleno tampoco confirma la foto', function()
-    FAKE.failAt=11; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),2)
+    FAKE.failAt=12; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),2)
 end)
 test('Hello funciona sin C_AddOns o si no devuelve nada', function()
     local old = C_AddOns
@@ -110,7 +110,7 @@ test('Hello funciona sin C_AddOns o si no devuelve nada', function()
     assert(FAKE.lines[6].text:match('|hello|0%.0%.0,16'))
 end)
 test('off durante reintento impide el envío', function()
-    FAKE.fail=true; iniciar(); SlashCmdList.WOWC('off'); FAKE.Advance(10); igual(FAKE.calls,22)
+    FAKE.fail=true; iniciar(); SlashCmdList.WOWC('off'); FAKE.Advance(10); igual(FAKE.calls,23)
 end)
 test('nombre por hipervínculo real', function()
     FAKE.Item(); iniciar(); assert(datos():find('Cajón arrebatado: Curiosidades de oficial',1,true))
@@ -150,10 +150,10 @@ test('encabezado genérico grande queda entero y el excesivo falla', function(P)
     assert(not pcall(P.Partes,'0123abcd',1,'bank',string.rep('a',3900),{}))
 end)
 test('todos los tipos comparten doce rellenos y sin cambios no mandan', function()
-    iniciar(); igual(#FAKE.Photos('*'),10); igual(#FAKE.lines,22)
+    iniciar(); igual(#FAKE.Photos('*'),11); igual(#FAKE.lines,23)
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Event('PLAYER_EQUIPMENT_CHANGED')
-    FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Advance(1); igual(#FAKE.lines,22)
-    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('*'),20); igual(#FAKE.lines,44)
+    FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Advance(1); igual(#FAKE.lines,23)
+    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('*'),22); igual(#FAKE.lines,46)
 end)
 test('sin Syndicator manda nosyn una vez', function()
     iniciar(); igual(FAKE.Photos('bank')[1].text:match('|bank|(.*)'), 'nosyn#')
@@ -313,8 +313,8 @@ end)
 test('fallo de parte tip y fallo de relleno no confirman el envío', function()
     FAKE.Item({itemID=1,hyperlink=Link(1)})
     ActivarTips(function() return UnTip() end)
-    FAKE.failAt=11; iniciar(); igual(#FAKE.Photos('tip'),0)
-    FAKE.failAt=26; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
+    FAKE.failAt=12; iniciar(); igual(#FAKE.Photos('tip'),0)
+    FAKE.failAt=27; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
     FAKE.failAt=nil; FAKE.Advance(2); igual(#FAKE.Photos('tip'),2)
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),2)
     SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),3)
@@ -955,6 +955,46 @@ test('dest descarta coordenadas fuera de rango y secretos', function()
         Flecha(FAKE.secret); FAKE.Advance(1); igual(DestPayload(), ',,,,#')
     end)
 end)
+
+local function LogPayload()
+    local fotos = FAKE.Photos('log')
+    return fotos[#fotos].text:match('|log|(.*)$')
+end
+local function ConRegistro(filas, objetivos, extra, fn)
+    C_QuestLog = {
+        GetNumQuestLogEntries=function() return #filas, 99 end,
+        GetInfo=function(i) return filas[i] end,
+        GetQuestObjectives=function(id) return objetivos[id] end,
+        ReadyForTurnIn=function(id) return extra.lista[id] end,
+        IsFailed=function(id) return extra.fallida[id] end,
+    }
+    local ok, err = pcall(fn)
+    C_QuestLog = nil
+    if not ok then error(err, 0) end
+end
+test('log manda el registro en orden con categoría, nivel, estado y objetivos', function()
+    ConRegistro({{title='Desolace', isHeader=true}, {title='Shellfish', level=33, questID=5386},
+        {title='Kodos, otra vez', level=34, questID=1365}, {title='Plegada', isHeader=true, isCollapsed=true}},
+        {[5386]={{text='Almejas: 2/10',numFulfilled=2,numRequired=10,finished=false}}},
+        {lista={[1365]=true}, fallida={[5386]=false}}, function()
+        iniciar()
+        igual(LogPayload(), '1#5386,33,0,0,Desolace,Shellfish,2,10,0,Almejas: 2/10;1365,34,1,0,Desolace,Kodos\\c otra vez')
+        FAKE.Event('QUEST_LOG_UPDATE'); FAKE.Advance(1); igual(#FAKE.Photos('log'), 1)
+    end)
+end)
+test('log marca fallidas, descarta secretos y corta en 35', function()
+    local filas = {{title=FAKE.secret, isHeader=true}, {title='Escolta', level=FAKE.secret, questID=10}, FAKE.secret,
+        {title='X', questID=FAKE.secret}}
+    for i = 1, 40 do filas[#filas + 1] = {title='M' .. i, level=1, questID=100 + i} end
+    ConRegistro(filas, {}, {lista={}, fallida={[10]=true}}, function()
+        iniciar()
+        local datos = LogPayload()
+        assert(datos:find('^0#10,,0,1,,Escolta;101,1,0,0,,M1;'), datos)
+        local n = select(2, datos:gsub(';', ';')) + 1
+        igual(n, 35)
+    end)
+end)
+test('log sin API del registro manda cero sin misiones', function() iniciar(); igual(LogPayload(), '0#') end)
 
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

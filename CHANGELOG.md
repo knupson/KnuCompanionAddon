@@ -1,5 +1,9 @@
 # Changelog
 
+## Sin publicar
+
+- La app recibe el registro de misiones completo, con la categoría, el nivel, si está lista o fallida y los objetivos.
+
 ## 0.13.0
 
 - El addon pasa a llamarse KNU Companion. La carpeta sigue siendo `WOWCompanion`.

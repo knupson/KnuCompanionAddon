@@ -1,7 +1,7 @@
 local _, ns = ...
 local KL = LibStub('KnuLib-1.0')
 local P, L = ns.Proto, ns.L
-local Print = KL:NewPrinter('Compañon')
+local Print = KL:NewPrinter('Companion')
 local function Limpiar(v)
     if P.EsSecreto(v, canaccessvalue, issecretvalue) then return nil end
     return v
@@ -561,6 +561,11 @@ local function EventoPosicion()
     Pedir('position', 'pos')
     AgendarGPS()
 end
+-- El canal es de una sola vía: el addon no puede saber si la app está abierta, así que avisa una vez por cuenta.
+local DESCARGA_APP = 'https://knunet.com' -- PENDIENTE: URL de descarga de la app (decisión del user, 2026-11-23)
+local function AvisoApp()
+    Print(string.format(L['This addon shows nothing in game: it sends your data to the desktop app. Get it at %s. Repeat this with /wowc app.'], DESCARGA_APP))
+end
 local function Comando(msg)
     msg = (msg or ''):match('^%s*(.-)%s*$'):lower()
     if msg == 'off' then enabled = false; sucio, forzar = {}, {}; Print(L['Disabled'])
@@ -582,6 +587,7 @@ local function Comando(msg)
         Print(string.format(L['sid=%s seq=%d enabled=%s last=%s padding=%d bytes failure=%s duration=%.2f ms max=%.2f ms'],
             sid, seq, L[enabled and 'yes' or 'no'], ultimoEnvio and tostring(ultimoEnvio) or L['none'],
             relleno, fallo or L['none'], duracion, maxima))
+    elseif msg == 'app' then AvisoApp()
     else Print(L['Usage: /wowc on | off | send | status']) end
 end
 events:On('PLAYER_ENTERING_WORLD', function() ns.LookEvent('PLAYER_ENTERING_WORLD'); Pedir('world'); Direccion(); AgendarGPS() end)
@@ -620,6 +626,11 @@ KL:OnLogin(function()
     ns.InitLook()
     IniciarTips()
     if WOWCompanionDB.gps == nil then WOWCompanionDB.gps = true end
+    if not WOWCompanionDB.avisoApp then
+        WOWCompanionDB.avisoApp = true
+        -- Unos segundos después, para que no se pierda entre los mensajes de entrada al mundo.
+        C_Timer.After(8, AvisoApp)
+    end
     if Syndicator and Syndicator.CallbackRegistry then
         Syndicator.CallbackRegistry:RegisterCallback('Ready', function() Pedir('ready', 'bank') end, ns)
         Syndicator.CallbackRegistry:RegisterCallback('BagCacheUpdate', function(_, personaje, cambios)

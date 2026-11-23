@@ -20,7 +20,8 @@ function FAKE.Reset()
     issecretvalue = function(v) return rawequal(v, FAKE.secret) end
     SlashCmdList, NUM_BAG_SLOTS = {}, 4
     FAKE.ns = {}
-    WOWCompanionDB, C_BarberShop = nil, nil
+    -- Aviso de la app ya visto: su timer de 8 s cambiaría las cuentas de timers y chat de las demás pruebas.
+    WOWCompanionDB, C_BarberShop = {avisoApp=true}, nil
     assert(loadfile('Locales/Locales.lua'))('WOWCompanion', FAKE.ns)
     assert(loadfile('Proto.lua'))('WOWCompanion', FAKE.ns)
     assert(loadfile('Look.lua'))('WOWCompanion', FAKE.ns)

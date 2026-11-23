@@ -2,5 +2,13 @@ package-as: WOWCompanion
 
 ignore:
   - tests
-  - README.md
+  - tools
+  - docs
   - .github
+  - dist
+  - "*.py"
+  - README.md
+
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown

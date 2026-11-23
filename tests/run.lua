@@ -897,5 +897,24 @@ test('mail avisa correo nuevo con hasta tres remitentes y descarta secretos', fu
 end)
 test('mail sin la API manda cero', function() iniciar(); igual(MailPayload(), '0#') end)
 
+local function avisos()
+    local n = 0
+    for _, s in ipairs(FAKE.chat) do if s:find('app de escritorio',1,true) then n = n + 1 end end
+    return n
+end
+local function primerIngreso() WOWCompanionDB = nil; recargarTips() end
+test('aviso de la app sale una vez, a los 8 s del primer ingreso', function()
+    primerIngreso(); FAKE.Advance(7); igual(avisos(),0)
+    FAKE.Advance(1); igual(avisos(),1); igual(WOWCompanionDB.avisoApp,true)
+    assert(FAKE.chat[#FAKE.chat]:find('https://',1,true))
+end)
+test('aviso de la app no se repite al recargar', function()
+    primerIngreso(); FAKE.Advance(8); recargarTips(); FAKE.Advance(20); igual(avisos(),1)
+end)
+test('/wowc app repite el aviso y figura en el uso', function()
+    primerIngreso(); FAKE.Advance(8); FAKE.command('app'); igual(avisos(),2)
+    FAKE.command('cualquiera'); assert(FAKE.chat[#FAKE.chat]:find('| app',1,true))
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

@@ -627,6 +627,9 @@ KL:OnLogin(function()
     ns.InitLook()
     IniciarTips()
     if WOWCompanionDB.gps == nil then WOWCompanionDB.gps = true end
+    -- La copia que instala la app agrega DesdeApp.lua (tools/publicar.ps1 del repo de la app): quien la tiene no necesita el aviso,
+    -- y queda marcado para que tampoco salga si después actualiza desde CurseForge.
+    if ns.desdeApp then WOWCompanionDB.avisoApp = true end
     if not WOWCompanionDB.avisoApp then
         WOWCompanionDB.avisoApp = true
         -- Unos segundos después, para que no se pierda entre los mensajes de entrada al mundo.

@@ -3,6 +3,7 @@
 ## Sin publicar
 
 - La app sabe en qué mazmorra o banda estás, para abrir su mapa sola.
+- Al tomar un vuelo, la app recibe la ruta hasta el destino.
 
 ## 0.15.0
 

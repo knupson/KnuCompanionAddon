@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi"}
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -491,7 +491,66 @@ local function Instancia()
     if not tipo or tipo == 'none' then return (tipo and ',none,' or ',,'), {} end
     return table.concat({Numero(id) or '', P.Escape(tipo), P.Escape(P.Recortar(Texto(nombre) or '', 120))}, ','), {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia}
+-- Vuelo en curso. Se arma al llamar TakeTaxiNode (hook) con los nodos del mapa de vuelo abierto: GetTaxiMapID,
+-- C_TaxiMap.GetAllTaxiNodes y los tramos de GetNumRoutes/TaxiGetNodeSlot (wow-ui-source rama forever 1.60.1.71037).
+-- Se borra al aterrizar, o a los 10 s si el vuelo no arrancó (sin plata, mapa cerrado).
+local vuelo, vueloEnAire, vueloInicio
+local function NodoTaxi(nodo)
+    nodo = Limpiar(nodo)
+    if type(nodo) ~= 'table' then return nil end
+    local pos, x, y = Limpiar(nodo.position)
+    if type(pos) == 'table' then
+        if type(Limpiar(pos.GetXY)) == 'function' then
+            local ok, a, b = pcall(pos.GetXY, pos)
+            if ok then x, y = a, b end
+        end
+        if x == nil then x, y = Limpiar(pos.x), Limpiar(pos.y) end
+    end
+    x, y = Real(x), Real(y)
+    if not x or not y or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
+    return {id=Numero(nodo.nodeID), slot=Numero(nodo.slotIndex), nombre=Texto(nodo.name), x=x, y=y}
+end
+local function ArmarVuelo(destino)
+    destino = Numero(destino)
+    local mapa = GetTaxiMapID and Numero(GetTaxiMapID())
+    if not destino or not mapa or not C_TaxiMap or not C_TaxiMap.GetAllTaxiNodes then return nil end
+    local porSlot = {}
+    local nodos = Limpiar(C_TaxiMap.GetAllTaxiNodes(mapa))
+    if type(nodos) ~= 'table' then return nil end
+    for _, n in ipairs(nodos) do
+        n = NodoTaxi(n)
+        if n and n.slot then porSlot[n.slot] = n end
+    end
+    local slots = {}
+    local tramos = GetNumRoutes and Numero(GetNumRoutes(destino)) or 0
+    for i = 1, math.min(tramos, 30) do
+        if i == 1 then slots[1] = TaxiGetNodeSlot and Numero(TaxiGetNodeSlot(destino, i, true)) end
+        slots[#slots + 1] = TaxiGetNodeSlot and Numero(TaxiGetNodeSlot(destino, i, false))
+    end
+    if #slots == 0 then slots = {destino} end
+    local registros = {}
+    for _, slot in ipairs(slots) do
+        local n = porSlot[slot]
+        if not n or not n.id then return nil end
+        registros[#registros + 1] = table.concat({n.id, (string.format('%.4f', n.x):gsub(',', '.')), (string.format('%.4f', n.y):gsub(',', '.'))}, ':')
+    end
+    local final = porSlot[destino]
+    return {cab=mapa .. ',' .. P.Escape(P.Recortar(final and final.nombre or '', 120)), registros=registros}
+end
+local function RevisarVuelo()
+    if not vuelo then return end
+    local enTaxi = Limpiar(UnitOnTaxi('player')) == true
+    if enTaxi then vueloEnAire = true return end
+    if vueloEnAire or GetTime() - (vueloInicio or 0) >= 10 then
+        vuelo, vueloEnAire = nil, false
+        Pedir('event', 'taxi')
+    end
+end
+local function Taxi()
+    if not vuelo then return ',', {} end
+    return vuelo.cab, vuelo.registros
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -745,7 +804,18 @@ end
 -- El taxi puede arrancar sin PLAYER_STARTED_MOVING. Las demás banderas no despiertan el GPS.
 events:On('UNIT_FLAGS', function(unit)
     if Texto(unit) == 'player' and Limpiar(UnitOnTaxi('player')) == true then AgendarGPS() end
+    if Texto(unit) == 'player' then RevisarVuelo() end
 end)
+events:On('PLAYER_CONTROL_GAINED', RevisarVuelo)
+if type(hooksecurefunc) == 'function' and type(TakeTaxiNode) == 'function' then
+    hooksecurefunc('TakeTaxiNode', function(slot)
+        local ok, armado = pcall(ArmarVuelo, slot)
+        if not ok or not armado then return end
+        vuelo, vueloEnAire, vueloInicio = armado, false, GetTime()
+        Pedir('event', 'taxi')
+        C_Timer.After(10, RevisarVuelo)
+    end)
+end
 KL:OnLogin(function()
     ns.InitLook()
     IniciarTips()

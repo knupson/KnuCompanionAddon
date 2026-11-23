@@ -481,5 +481,53 @@ test('hello en cada entrada al mundo comparte el relleno', function()
     for i=#FAKE.lines-11,#FAKE.lines do igual(FAKE.lines[i].text,'KCP' .. string.rep('x',4086)) end
 end)
 
+local function recargarTips()
+    FAKE.timers, FAKE.handlers = {}, {}
+    assert(loadfile('Core.lua'))('WOWCompanion', FAKE.ns)
+end
+
+test('tooltips persisten entre sesiones y se separan por idioma', function()
+    FAKE.Item({itemID=100,stackCount=1,hyperlink='|Hitem:100:0|h[X]|h'})
+    C_TooltipInfo = {GetBagItem=function() return {lines={{leftText='Nombre'}}} end}
+    iniciar(); igual(#FAKE.Photos('tip'),1)
+    igual(#WOWCompanionDB.tipsEnviados.claves,1)
+    recargarTips(); iniciar(); igual(#FAKE.Photos('tip'),1)
+    FAKE.locale='enUS'
+    recargarTips(); iniciar(); igual(#FAKE.Photos('tip'),2)
+    igual(#WOWCompanionDB.tipsEnviados.claves,2)
+    FAKE.locale='esMX'
+    recargarTips(); iniciar(); igual(#FAKE.Photos('tip'),2)
+end)
+
+test('cambiar la versión del addon vacía tooltips guardados', function()
+    WOWCompanionDB.tipsEnviados = {version='anterior',claves={'esMX|item:100:0'}}
+    recargarTips()
+    igual(WOWCompanionDB.tipsEnviados.version,C_AddOns.GetAddOnMetadata())
+    igual(#WOWCompanionDB.tipsEnviados.claves,0)
+end)
+
+test('tooltips guardados tienen tope de 2000 al cargar y al confirmar', function()
+    local claves={}
+    for i=1,2001 do claves[i]='esMX|item:'..i..':0' end
+    WOWCompanionDB.tipsEnviados={version=C_AddOns.GetAddOnMetadata(),claves=claves}
+    recargarTips()
+    igual(#WOWCompanionDB.tipsEnviados.claves,2000)
+    igual(WOWCompanionDB.tipsEnviados.claves[1],'esMX|item:2:0')
+    FAKE.Item({itemID=3000,stackCount=1,hyperlink='|Hitem:3000:0|h[X]|h'})
+    C_TooltipInfo = {GetBagItem=function() return {lines={{leftText='Nuevo'}}} end}
+    iniciar()
+    igual(#FAKE.Photos('tip'),1)
+    igual(#WOWCompanionDB.tipsEnviados.claves,2000)
+    igual(WOWCompanionDB.tipsEnviados.claves[1],'esMX|item:3:0')
+    igual(WOWCompanionDB.tipsEnviados.claves[2000],'esMX|item:3000:0')
+end)
+
+test('fallo de escritura no persiste tooltips', function()
+    FAKE.Item({itemID=100,stackCount=1,hyperlink='|Hitem:100:0|h[X]|h'})
+    C_TooltipInfo = {GetBagItem=function() return {lines={{leftText='Nombre'}}} end}
+    FAKE.fail=true; iniciar()
+    igual(#WOWCompanionDB.tipsEnviados.claves,0)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

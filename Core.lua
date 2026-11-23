@@ -26,6 +26,44 @@ local duracion, maxima = 0, 0
 
 -- La clave incluye idioma y el itemString entero; no se recorta la identidad.
 local tipsEnviados, colaTips, ordenTips, tipsAgotados = {}, {}, {}, {}
+local tipsGuardados, ordenGuardados
+local function IniciarTips(vaciar)
+    local version
+    if C_AddOns and C_AddOns.GetAddOnMetadata then version = Texto(C_AddOns.GetAddOnMetadata('WOWCompanion', 'Version'))
+    elseif GetAddOnMetadata then version = Texto(GetAddOnMetadata('WOWCompanion', 'Version')) end
+    version = version or ''
+    if type(WOWCompanionDB) ~= 'table' then WOWCompanionDB = {} end
+    local cache = WOWCompanionDB.tipsEnviados
+    -- Se olvida una vez por día: si la app perdió su caché de tooltips, a lo sumo pasa un día sin ellos
+    -- (el canal es de una sola vía y la app no puede pedirlos; /wowc send también vacía).
+    local hoy = type(date) == 'function' and Texto(date('%Y-%m-%d')) or ''
+    if vaciar or type(cache) ~= 'table' or cache.version ~= version or (cache.dia ~= nil and cache.dia ~= hoy) then
+        cache = {version=version, dia=hoy, claves={}}
+        WOWCompanionDB.tipsEnviados = cache
+    end
+    if type(cache) == 'table' and cache.dia == nil then cache.dia = hoy --[[ datos de la versión anterior: desde hoy ]]
+    end
+    -- Normalizar al cargar y conservar las últimas 2000 claves entre todos los idiomas.
+    local claves = type(cache.claves) == 'table' and cache.claves or {}
+    tipsEnviados, ordenGuardados = {}, {}
+    for i=math.max(1, #claves - 1999),#claves do
+        local clave = claves[i]
+        if type(clave) == 'string' and #clave <= 4096 and clave:find('|item:', 1, true) and not tipsEnviados[clave] then
+            tipsEnviados[clave] = true
+            ordenGuardados[#ordenGuardados + 1] = clave
+        end
+    end
+    cache.claves, tipsGuardados = ordenGuardados, cache
+end
+local function ConfirmarTip(clave)
+    if not tipsGuardados then IniciarTips() end
+    if tipsEnviados[clave] then return end
+    if #ordenGuardados >= 2000 then
+        tipsEnviados[table.remove(ordenGuardados, 1)] = nil
+    end
+    ordenGuardados[#ordenGuardados + 1] = clave
+    tipsEnviados[clave] = true
+end
 local function ItemString(link) return link and link:match('|H(item:[^|]+)|h') or '' end
 local function ColorTip(color)
     color = Limpiar(color)
@@ -266,7 +304,8 @@ local function Enviar()
         for _, envio in ipairs(enviadosTips) do
             local tip = envio.tip
             if envio.ok and rellenoOk then
-                tipsEnviados[tip.clave], colaTips[tip.clave] = true, nil
+                ConfirmarTip(tip.clave)
+                colaTips[tip.clave] = nil
                 ultimoEnvio = GetTime()
             elseif tip.intentos < 3 then
                 ordenTips[#ordenTips + 1] = tip.clave
@@ -319,7 +358,8 @@ local function Comando(msg)
     if msg == 'off' then enabled = false; sucio, forzar = {}, {}; Print(L['Disabled'])
     elseif msg == 'on' then enabled = true; Print(L['Enabled']); Pedir('send')
     elseif msg == 'send' then
-        tipsEnviados, colaTips, ordenTips, tipsAgotados = {}, {}, {}, {}
+        IniciarTips(true)
+        colaTips, ordenTips, tipsAgotados = {}, {}, {}
         Pedir('send')
     elseif msg == 'status' then
         Print(string.format(L['sid=%s seq=%d enabled=%s last=%s padding=%d bytes failure=%s duration=%.2f ms max=%.2f ms'],
@@ -342,6 +382,7 @@ for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'ZONE_CHANGED', 'ZON
 end
 KL:OnLogin(function()
     ns.InitLook()
+    IniciarTips()
     if Syndicator and Syndicator.CallbackRegistry then
         Syndicator.CallbackRegistry:RegisterCallback('Ready', function() Pedir('ready', 'bank') end, ns)
         Syndicator.CallbackRegistry:RegisterCallback('BagCacheUpdate', function(_, personaje, cambios)

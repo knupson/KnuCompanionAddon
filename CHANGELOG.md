@@ -1,6 +1,6 @@
 # Changelog
 
-## Sin publicar
+## 0.13.0
 
 - El addon pasa a llamarse KNU Companion. La carpeta sigue siendo `WOWCompanion`.
 - La primera vez que entrás al juego, un mensaje en el chat avisa que hace falta la app de escritorio y de dónde se baja. `/wowc app` lo repite.

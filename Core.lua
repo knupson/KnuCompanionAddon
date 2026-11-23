@@ -26,6 +26,8 @@ local ultimoEnvio, ultimoVolcado, fallo
 local duracion, maxima = 0, 0
 local ultimaPos, posVolcada
 local gpsPendiente, ultimoGiro, facingAnterior, volcadoDiferido
+-- El juego escribe el log a disco por bloques (49.168 a 52.132 bytes medidos): sin relleno la posición llegó hasta 16 s tarde (2026-11-23).
+local VOLCADO_GPS = 1
 local events = KL:NewEvents()
 local Pedir
 local marcasPendientes, eventoMarcas, marcasIntentos = {}, false, {}
@@ -396,7 +398,7 @@ local function Enviar()
         local necesitaRelleno = #enviadosTips > 0
         for _, envio in ipairs(enviados) do
             if not sinRelleno[envio.tipo] or (envio.posicion and PosDistinta(envio.posicion, posVolcada)
-                and GetTime() - (ultimoVolcado or 0) >= 10) then necesitaRelleno = true end
+                and GetTime() - (ultimoVolcado or 0) >= VOLCADO_GPS) then necesitaRelleno = true end
         end
         local rellenoOk = true
         if necesitaRelleno then
@@ -427,10 +429,10 @@ local function Enviar()
         end
         -- Otro tipo también vuelca las posiciones que ya estaban en el búfer.
         if necesitaRelleno and rellenoOk then posVolcada = ultimaPos end
-        -- Al frenar antes de los 10 s la última posición quedaría en el búfer: un único volcado forzado al cumplirse.
+        -- Al frenar antes del plazo la última posición quedaría en el búfer: un único volcado forzado al cumplirse.
         if ultimaPos and not volcadoDiferido and PosDistinta(ultimaPos, posVolcada) then
             volcadoDiferido = true
-            C_Timer.After(math.max(0, (ultimoVolcado or 0) + 10 - GetTime()), function()
+            C_Timer.After(math.max(0, (ultimoVolcado or 0) + VOLCADO_GPS - GetTime()), function()
                 volcadoDiferido = false
                 if posVolcada ~= ultimaPos then Pedir('position', 'pos') end
             end)

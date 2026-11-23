@@ -593,42 +593,35 @@ test('giro sólo envía al cambiar el paso de diez grados', function()
     igual(#FAKE.Photos('pos'),2); igual(PosPayload(),'37,0.2500,0.7500,0.175#')
 end)
 
-test('sólo pos no escribe relleno ni cambia el reloj del volcado', function()
-    Ubicar(); iniciar()
-    for i=1,9 do
+-- El juego escribe el log por bloques: cada posición nueva lleva relleno para que la app la vea en el segundo.
+test('cada posición nueva se vuelca enseguida, una vez por segundo', function()
+    Ubicar(); iniciar(); igual(Rellenos(),12)
+    for i=1,5 do
         FAKE.x=0.25+i*0.003; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
-        igual(Rellenos(),12)
+        igual(Rellenos(),12+12*i)
     end
-    FAKE.x=0.28; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
-    igual(Rellenos(),24); igual(FAKE.now,11)
-    FAKE.x=0.29; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(Rellenos(),24)
+    FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(Rellenos(),72)
 end)
 
-test('pos comparte relleno con otros tipos y su volcado reinicia los diez segundos', function()
+test('pos y otro tipo en la misma tanda comparten un solo relleno', function()
     Ubicar(); iniciar(); FAKE.Advance(4)
     FAKE.money=1; FAKE.x=0.3
     FAKE.Event('PLAYER_MONEY'); FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
     igual(Rellenos(),24)
-    FAKE.Advance(4); FAKE.x=0.4; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
-    igual(Rellenos(),24)
-    FAKE.Advance(4); FAKE.x=0.5; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
-    igual(Rellenos(),36)
 end)
 
-test('girar quieto vuelca la dirección nueva una vez pasados diez segundos', function()
-    Ubicar(); iniciar(); FAKE.Advance(10)
+test('girar quieto vuelca la dirección nueva', function()
+    Ubicar(); iniciar(); FAKE.Advance(1)
     FAKE.facing=math.rad(90); FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
     igual(#FAKE.Photos('pos'),2); igual(Rellenos(),24)
 end)
 
-test('relleno de otro tipo también confirma posiciones previas en el búfer', function()
+test('relleno de otro tipo también confirma la posición ya volcada', function()
     Ubicar(); iniciar()
     FAKE.x=0.4; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
     FAKE.money=1; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(1)
-    igual(Rellenos(),24)
-    FAKE.Advance(10); FAKE.facing=math.rad(90)
-    FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
     igual(Rellenos(),36)
+    FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(Rellenos(),36)
 end)
 
 test('GPS quieto no sondea y al frenar se apaga', function()
@@ -642,15 +635,17 @@ test('GPS quieto no sondea y al frenar se apaga', function()
     local n=#FAKE.lines; FAKE.Advance(30); igual(#FAKE.lines,n)
 end)
 
--- Auditoría de Gemini (2026-11-23): frenar antes de 10 s del último volcado dejaba la posición final en el búfer.
-test('al frenar antes de 10 s la posición final se vuelca sola', function()
+-- Auditoría de Gemini (2026-11-23): al frenar, la posición final no puede quedar en el búfer del juego.
+test('al frenar la posición final queda volcada', function()
     Ubicar(); iniciar()
     FAKE.moving=true; FAKE.Event('PLAYER_STARTED_MOVING'); FAKE.Advance(1)
-    FAKE.x=FAKE.x+0.05; FAKE.moving=false; FAKE.Event('PLAYER_STOPPED_MOVING'); FAKE.Advance(1)
-    local final=PosPayload(); local antes=#FAKE.lines
-    FAKE.Advance(12)
-    assert(#FAKE.lines>antes+11, 'falta el volcado diferido')
-    igual(PosPayload(), final); igual(#FAKE.timers,0)
+    FAKE.x=FAKE.x+0.05; FAKE.moving=false; FAKE.Event('PLAYER_STOPPED_MOVING'); FAKE.Advance(2)
+    local ultimaPos=0
+    for i, linea in ipairs(FAKE.lines) do if linea.text:match('|pos|') then ultimaPos=i end end
+    local despues=0
+    for i=ultimaPos+1, #FAKE.lines do if FAKE.lines[i].text:match('^KCP') then despues=despues+1 end end
+    assert(despues>=12, 'falta el relleno después de la última posición')
+    FAKE.Advance(12); igual(#FAKE.timers,0)
 end)
 
 test('GPS sigue taxi y vehículo aunque IsPlayerMoving sea falso', function()

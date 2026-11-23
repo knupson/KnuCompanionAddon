@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest"}
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -330,7 +330,45 @@ local function Hello()
     local _, _, _, interface = GetBuildInfo()
     return P.Escape(version or '0.0.0') .. ',' .. tostring(interface), {}
 end
-local fotos = {hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion}
+-- Misiones con objetivo en el mapa actual: posición, título y objetivos (probado en Forever el 2026-11-23).
+local function Misiones()
+    local map = Numero(C_Map.GetBestMapForUnit('player'))
+    local seguida = C_SuperTrack and C_SuperTrack.GetSuperTrackedQuestID and Numero(C_SuperTrack.GetSuperTrackedQuestID()) or nil
+    local registros = {}
+    local lista = map and C_QuestLog and C_QuestLog.GetQuestsOnMap and Limpiar(C_QuestLog.GetQuestsOnMap(map))
+    local function Coordenada(v)
+        v = Real(v)
+        if v and v >= 0 and v <= 1 then return (string.format('%.4f', v):gsub(',', '.')) end
+    end
+    if type(lista) == 'table' then
+        for _, q in ipairs(lista) do
+            if #registros >= 25 then break end
+            q = Limpiar(q)
+            local id = type(q) == 'table' and Numero(q.questID)
+            local x, y = id and Coordenada(q.x), id and Coordenada(q.y)
+            if id and id > 0 and x and y then
+                local entregar = C_QuestLog.ReadyForTurnIn and Limpiar(C_QuestLog.ReadyForTurnIn(id))
+                local campos = {id, x, y, entregar == true and 1 or 0,
+                    P.Escape(P.Recortar(C_QuestLog.GetTitleForQuestID and Texto(C_QuestLog.GetTitleForQuestID(id)) or '', 120))}
+                local objetivos = C_QuestLog.GetQuestObjectives and Limpiar(C_QuestLog.GetQuestObjectives(id))
+                if type(objetivos) == 'table' then
+                    for i = 1, math.min(#objetivos, 8) do
+                        local o = Limpiar(objetivos[i])
+                        if type(o) == 'table' then
+                            campos[#campos + 1] = Numero(o.numFulfilled) or ''
+                            campos[#campos + 1] = Numero(o.numRequired) or ''
+                            campos[#campos + 1] = Limpiar(o.finished) == true and 1 or 0
+                            campos[#campos + 1] = P.Escape(P.Recortar(Texto(o.text) or '', 120))
+                        end
+                    end
+                end
+                registros[#registros + 1] = table.concat(campos, ',')
+            end
+        end
+    end
+    return table.concat({map or '', seguida or ''}, ','), registros
+end
+local fotos = {hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -531,6 +569,9 @@ for _, event in ipairs({'BARBER_SHOP_OPEN', 'BARBER_SHOP_APPEARANCE_APPLIED', 'B
     events:On(event, function() ns.LookEvent(event); Pedir('event', 'look') end)
 end
 events:On('BAG_UPDATE_DELAYED', function() Pedir('event', 'bags') end)
+for _, evento in ipairs({'QUEST_LOG_UPDATE', 'QUEST_WATCH_LIST_CHANGED', 'SUPER_TRACKING_CHANGED'}) do
+    events:On(evento, function() Pedir('event', 'quest') end)
+end
 events:On('PLAYER_EQUIPMENT_CHANGED', function() Pedir('event', 'equip'); Pedir('event', 'char') end)
 events:On('UNIT_INVENTORY_CHANGED', function(unit)
     if Texto(unit) == 'player' then Pedir('event', 'equip') end
@@ -538,7 +579,7 @@ end)
 for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'PLAYER_XP_UPDATE', 'ZONE_CHANGED', 'ZONE_CHANGED_NEW_AREA', 'ZONE_CHANGED_INDOORS'}) do
     events:On(evento, function()
         Pedir('event', 'char')
-        if evento:match('^ZONE_CHANGED') then EventoPosicion() end
+        if evento:match('^ZONE_CHANGED') then EventoPosicion(); Pedir('event', 'quest') end
     end)
 end
 for _, evento in ipairs({'PLAYER_STARTED_MOVING', 'PLAYER_STOPPED_MOVING', 'PLAYER_STOPPED_TURNING'}) do

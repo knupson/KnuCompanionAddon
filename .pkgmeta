@@ -1,0 +1,6 @@
+package-as: WOWCompanion
+
+ignore:
+  - tests
+  - README.md
+  - .github

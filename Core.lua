@@ -26,6 +26,48 @@ local ultimoEnvio, ultimoVolcado, fallo
 local duracion, maxima = 0, 0
 local ultimaPos, posVolcada
 local gpsPendiente, ultimoGiro, facingAnterior, volcadoDiferido
+local events = KL:NewEvents()
+local Pedir
+local marcasPendientes, eventoMarcas = {}, false
+local function InfoMarca(id)
+    id = Numero(id)
+    local tiposItem = id and marcasPendientes[id]
+    if not tiposItem then return end
+    marcasPendientes[id] = nil
+    if not next(marcasPendientes) then
+        events:Off('GET_ITEM_INFO_RECEIVED', InfoMarca)
+        eventoMarcas = false
+    end
+    -- Pedir agrupa ráfagas y limita el envío mediante el timer existente.
+    for tipo in pairs(tiposItem) do Pedir('event', tipo) end
+end
+local function Marca(link, id, tipo, bag, slot)
+    local api = Limpiar(KnuJunkAPI)
+    if type(api) ~= 'table' or type(api.MarkFor) ~= 'function' then return '', false end
+    -- No pasar secretos ni links inválidos al clasificador opcional.
+    if not link or not link:match('item:%d+') then return '', false end
+    local marca = Texto(api.MarkFor(link, bag, slot))
+    local falta = not marca and id and C_Item and C_Item.GetItemInfo and not Texto(C_Item.GetItemInfo(id))
+    if falta then
+        marcasPendientes[id] = marcasPendientes[id] or {}
+        marcasPendientes[id][tipo] = true
+        if not eventoMarcas then
+            events:On('GET_ITEM_INFO_RECEIVED', InfoMarca)
+            eventoMarcas = true
+        end
+    end
+    return P.Escape(marca or ''), falta
+end
+local function LimpiarMarcas(tipo)
+    for id, pendientes in pairs(marcasPendientes) do
+        pendientes[tipo] = nil
+        if not next(pendientes) then marcasPendientes[id] = nil end
+    end
+    if eventoMarcas and not next(marcasPendientes) then
+        events:Off('GET_ITEM_INFO_RECEIVED', InfoMarca)
+        eventoMarcas = false
+    end
+end
 
 local function Real(v)
     v = Limpiar(v)
@@ -159,6 +201,7 @@ local function LeerTip(tip)
 end
 
 local function Bolsas()
+    LimpiarMarcas('bags')
     local bolsas, registros, faltaNombre = {}, {}, false
     local limite = Numero(NUM_BAG_SLOTS) or 4
     local ids = {}
@@ -177,8 +220,10 @@ local function Bolsas()
                     local name = link and link:match('|h%[(.-)%]|h')
                     if (not name or name == '') and id and C_Item and C_Item.GetItemInfo then name = Texto(C_Item.GetItemInfo(id)) end
                     if not name or name == '' then name, faltaNombre = '', true end
+                    local marca, falta = Marca(link, id, 'bags', bag, slot)
+                    faltaNombre = faltaNombre or falta
                     registros[#registros + 1] = table.concat({bag, slot, id or '', count or '', quality or '', icon or '',
-                        P.Escape(P.Recortar(name, 200)), P.Escape(PrepararTip(link, 'GetBagItem', bag, slot))}, ',')
+                        P.Escape(P.Recortar(name, 200)), P.Escape(PrepararTip(link, 'GetBagItem', bag, slot)), marca}, ',')
                 end
             end
         end
@@ -193,6 +238,8 @@ local function Nombre(id, link)
 end
 
 local function Banco()
+    LimpiarMarcas('bank')
+    local faltan = false
     if not Syndicator then return 'nosyn', {} end
     if not Limpiar(Syndicator.API.IsReady()) then return nil end
     local personaje = Texto(Syndicator.API.GetCurrentCharacter())
@@ -213,19 +260,23 @@ local function Banco()
                     if id then
                         local link = Texto(info.itemLink)
                         local nombre = Nombre(id, link)
+                        -- Syndicator es una foto guardada: tab no es un bagID vivo.
+                        local marca, falta = Marca(link, id, 'bank')
+                        faltan = faltan or falta
                         registros[#registros + 1] = table.concat({tab, slot, id, Numero(info.itemCount) or '',
                             Numero(info.quality) or '', Numero(info.iconTexture) or '', nombre,
-                            P.Escape(PrepararTip(link, 'GetHyperlink', link))}, ',')
+                            P.Escape(PrepararTip(link, 'GetHyperlink', link)), marca}, ',')
                     end
                 end
             end
         end
     end
     if #cab == 1 then return 'nodata', {} end
-    return table.concat(cab, ';'), registros
+    return table.concat(cab, ';'), registros, faltan
 end
 
 local function Equipo()
+    LimpiarMarcas('equip')
     local registros, faltan = {}, false
     for slot = 1, 19 do
         local id = Numero(GetInventoryItemID('player', slot))
@@ -234,9 +285,10 @@ local function Equipo()
             local icono = Numero(GetInventoryItemTexture('player', slot))
             local link = Texto(GetInventoryItemLink('player', slot))
             local nombre, falta = Nombre(id, link)
-            faltan = faltan or falta or calidad == nil
+            local marca, faltaMarca = Marca(link, id, 'equip')
+            faltan = faltan or falta or faltaMarca or calidad == nil
             registros[#registros + 1] = table.concat({slot, id, calidad or '', icono or '', nombre,
-                P.Escape(PrepararTip(link, 'GetInventoryItem', 'player', slot))}, ',')
+                P.Escape(PrepararTip(link, 'GetInventoryItem', 'player', slot)), marca}, ',')
         end
     end
     return '', registros, faltan
@@ -274,7 +326,6 @@ local function Hello()
     return P.Escape(version or '0.0.0') .. ',' .. tostring(interface), {}
 end
 local fotos = {hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion}
-local Pedir
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -471,7 +522,6 @@ local function Comando(msg)
             relleno, fallo or L['none'], duracion, maxima))
     else Print(L['Usage: /wowc on | off | send | status']) end
 end
-local events = KL:NewEvents()
 events:On('PLAYER_ENTERING_WORLD', function() ns.LookEvent('PLAYER_ENTERING_WORLD'); Pedir('world'); Direccion(); AgendarGPS() end)
 for _, event in ipairs({'BARBER_SHOP_OPEN', 'BARBER_SHOP_APPEARANCE_APPLIED', 'BARBER_SHOP_CLOSE'}) do
     events:On(event, function() ns.LookEvent(event); Pedir('event', 'look') end)

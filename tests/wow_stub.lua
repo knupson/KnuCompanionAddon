@@ -3,6 +3,7 @@ math.randomseed = nil
 -- Reloj determinista: avanzar dispara únicamente los callbacks ya vencidos.
 FAKE = {}
 function FAKE.Reset()
+    KnuJunkAPI = nil
     Syndicator, SYNDICATOR_DATA, C_TooltipInfo = nil, nil, nil
     FAKE.name, FAKE.class, FAKE.race, FAKE.ilvl, FAKE.locale = "Yaestoy Muerto", "PALADIN", "Humano", 32.16, "esMX"
     FAKE.raceID, FAKE.sex = 1, 2
@@ -71,7 +72,8 @@ function KL:NewLocale(es, en)
 end
 function KL:NewPrinter() return function(s) FAKE.chat[#FAKE.chat + 1] = s end end
 function KL:NewEvents()
-    return {On=function(_, event, fn) FAKE.handlers[event] = fn end}
+    return {On=function(_, event, fn) FAKE.handlers[event] = fn end,
+        Off=function(_, event) FAKE.handlers[event] = nil end}
 end
 function KL:OnLogin(fn) fn() end
 function KL:RegisterCommand(name, handler, help) FAKE.command, FAKE.commandName = handler, name end

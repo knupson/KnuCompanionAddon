@@ -46,7 +46,7 @@ end)
 test('secretos en todos los campos sin compararlos ni convertirlos', function()
     local S = FAKE.secret
     FAKE.Item({itemID=S,stackCount=S,quality=S,iconFileID=S,hyperlink=S})
-    iniciar(); igual(datos():match('#(.*)'), '0,1,,,,,,')
+    iniciar(); igual(datos():match('#(.*)'), '0,1,,,,,,,')
 end)
 test('tabla de objeto y tamaño secretos', function()
     FAKE.items['0:1'], FAKE.sizes[1], FAKE.sizes[5] = FAKE.secret, FAKE.secret, FAKE.secret
@@ -737,6 +737,75 @@ test('char escapa el reino y limpia nil o secretos', function(P)
     FAKE.xp = 121
     FAKE.Event('PLAYER_XP_UPDATE'); FAKE.Advance(1)
     assert(FAKE.Photos('char')[3].text:find(',121,1000,#', 1, true))
+end)
+
+test('marca opcional sin API ni registro de evento', function()
+    FAKE.Item(); iniciar()
+    assert(datos():sub(-1) == ',')
+    igual(FAKE.handlers.GET_ITEM_INFO_RECEIVED, nil)
+end)
+
+test('marcas API escapadas en bolsas banco y equipo', function(P)
+    FAKE.Syndicator(true, 'Actual')
+    local link = '|Hitem:123:0|h[Objeto]|h'
+    FAKE.Item({itemID=123, hyperlink=link})
+    FAKE.equip[1] = {id=123, link=link, quality=1}
+    SYNDICATOR_DATA.Characters.Actual = {bankTabs={{slots={{itemID=123,itemLink=link}}}}}
+    KnuJunkAPI = {MarkFor=function(l, bag, slot)
+        igual(l, link)
+        if bag then igual(bag, 0); igual(slot, 1) end
+        return 'trash,|;#'
+    end}
+    iniciar()
+    for _, tipo in ipairs({'bags', 'bank', 'equip'}) do
+        assert(FAKE.Photos(tipo)[1].text:find(',' .. P.Escape('trash,|;#'), 1, true))
+    end
+end)
+
+test('marca nil pendiente reintenta tras evento aunque agotó los intentos', function()
+    local ready = false
+    FAKE.Item({itemID=123, hyperlink='|Hitem:123|h[Objeto]|h'})
+    KnuJunkAPI = {MarkFor=function() return ready and 'quest' or nil end}
+    iniciar(); FAKE.Advance(20)
+    igual(#FAKE.Photos(), 3)
+    assert(FAKE.handlers.GET_ITEM_INFO_RECEIVED)
+    FAKE.Event('GET_ITEM_INFO_RECEIVED', FAKE.secret)
+    FAKE.Event('GET_ITEM_INFO_RECEIVED', 999)
+    igual(#FAKE.timers, 0)
+    ready = true; FAKE.names[123] = 'Objeto'
+    FAKE.Event('GET_ITEM_INFO_RECEIVED', 123, true)
+    igual(FAKE.handlers.GET_ITEM_INFO_RECEIVED, nil)
+    FAKE.Advance(1)
+    igual(#FAKE.Photos(), 4)
+    assert(FAKE.Photos()[4].text:find(',quest', 1, true))
+end)
+
+test('marca nil con datos cargados no pide eventos ni reintentos', function()
+    FAKE.Item({itemID=123, hyperlink='|Hitem:123|h[Objeto]|h'})
+    FAKE.names[123] = 'Objeto'
+    KnuJunkAPI = {MarkFor=function() return nil end}
+    iniciar(); FAKE.Advance(20)
+    igual(#FAKE.Photos(), 1)
+    igual(FAKE.handlers.GET_ITEM_INFO_RECEIVED, nil)
+end)
+
+test('API inválida y link secreto o inválido no se invocan', function()
+    KnuJunkAPI = {MarkFor=function() error('No se debe invocar') end}
+    FAKE.Item({itemID=123, hyperlink=FAKE.secret}); iniciar()
+    FAKE.items['0:1'].hyperlink = 'inválido'
+    FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1)
+    KnuJunkAPI = {MarkFor=true}
+    FAKE.items['0:1'].hyperlink = '|Hitem:123|h[Objeto]|h'
+    FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1)
+    igual(FAKE.handlers.GET_ITEM_INFO_RECEIVED, nil)
+end)
+
+test('marca pendiente se cancela al retirar el objeto', function()
+    FAKE.Item({itemID=123, hyperlink='|Hitem:123|h[Objeto]|h'})
+    KnuJunkAPI = {MarkFor=function() return nil end}
+    iniciar(); assert(FAKE.handlers.GET_ITEM_INFO_RECEIVED)
+    FAKE.items = {}; FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(2)
+    igual(FAKE.handlers.GET_ITEM_INFO_RECEIVED, nil)
 end)
 
 print(string.format('%d pruebas, %d fallas',total,fallas))

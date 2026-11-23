@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail"}
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -368,7 +368,20 @@ local function Misiones()
     end
     return table.concat({map or '', seguida or ''}, ','), registros
 end
-local fotos = {hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones}
+-- Aviso de correo sin abrir el buzón: HasNewMail y GetLatestThreeSenders son globales del cliente.
+local function Correo()
+    local nuevo = HasNewMail and Limpiar(HasNewMail())
+    local registros = {}
+    if nuevo and GetLatestThreeSenders then
+        local remitentes = {GetLatestThreeSenders()}
+        for i = 1, 3 do
+            local nombre = Texto(remitentes[i])
+            if nombre and nombre ~= '' then registros[#registros + 1] = P.Escape(P.Recortar(nombre, 60)) end
+        end
+    end
+    return nuevo and '1' or '0', registros
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -569,6 +582,9 @@ for _, event in ipairs({'BARBER_SHOP_OPEN', 'BARBER_SHOP_APPEARANCE_APPLIED', 'B
     events:On(event, function() ns.LookEvent(event); Pedir('event', 'look') end)
 end
 events:On('BAG_UPDATE_DELAYED', function() Pedir('event', 'bags') end)
+for _, evento in ipairs({'UPDATE_PENDING_MAIL', 'MAIL_INBOX_UPDATE', 'MAIL_CLOSED'}) do
+    events:On(evento, function() Pedir('event', 'mail') end)
+end
 for _, evento in ipairs({'QUEST_LOG_UPDATE', 'QUEST_WATCH_LIST_CHANGED', 'SUPER_TRACKING_CHANGED'}) do
     events:On(evento, function() Pedir('event', 'quest') end)
 end

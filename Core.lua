@@ -427,8 +427,7 @@ local function Enviar()
         end
         -- Otro tipo también vuelca las posiciones que ya estaban en el búfer.
         if necesitaRelleno and rellenoOk then posVolcada = ultimaPos end
-        -- Al frenar antes de los 10 s, la última posición quedaría en el búfer sin volcar: se agenda un
-        -- único volcado forzado para cuando se cumplan (auditoría de Gemini, 2026-11-23).
+        -- Al frenar antes de los 10 s la última posición quedaría en el búfer: un único volcado forzado al cumplirse.
         if ultimaPos and not volcadoDiferido and PosDistinta(ultimaPos, posVolcada) then
             volcadoDiferido = true
             C_Timer.After(math.max(0, (ultimoVolcado or 0) + 10 - GetTime()), function()

@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat"}
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -441,11 +441,53 @@ local function Destino()
     return table.concat({map, (string.format('%.4f', x):gsub(',', '.')), (string.format('%.4f', y):gsub(',', '.')),
         Campo(uid.title), Campo(uid.from)}, ','), {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro}
+-- Chat para el panel de la app. Los mensajes se juntan en un buffer (tope 50) y salen agrupados por el timer de Pedir;
+-- sólo se borran los que llegaron a escribirse. Los canales públicos (General, Comercio...) son opcionales por el volumen.
+local bufferChat, chatEnviados = {}, 0
+local canalesChat = {
+    CHAT_MSG_GUILD='guild', CHAT_MSG_OFFICER='officer', CHAT_MSG_WHISPER='whisper', CHAT_MSG_WHISPER_INFORM='whisper_out',
+    CHAT_MSG_PARTY='party', CHAT_MSG_PARTY_LEADER='party', CHAT_MSG_RAID='raid', CHAT_MSG_RAID_LEADER='raid',
+    CHAT_MSG_INSTANCE_CHAT='instance', CHAT_MSG_INSTANCE_CHAT_LEADER='instance', CHAT_MSG_CHANNEL='channel',
+}
+local function ChatActivo(evento)
+    if not enabled or type(WOWCompanionDB) ~= 'table' or WOWCompanionDB.chat == false then return false end
+    return evento ~= 'CHAT_MSG_CHANNEL' or WOWCompanionDB.chatCanales == true
+end
+local function MensajeChat(evento, texto, remitente, _, nombreCanal, _, _, _, _, canalBase, _, lineID)
+    if not ChatActivo(evento) then return end
+    -- Remitente o texto secretos (SecretInChatMessagingLockdown): el mensaje no se manda.
+    texto, remitente = Texto(texto), Texto(remitente)
+    if not texto or not remitente then return end
+    local canal = canalesChat[evento]
+    if canal == 'channel' then
+        local nombre = Texto(canalBase) or Texto(nombreCanal)
+        if not nombre or nombre == '' then return end
+        canal = 'channel:' .. P.Recortar(nombre, 60)
+    end
+    if #bufferChat >= 50 then
+        table.remove(bufferChat, 1)
+        chatEnviados = math.max(0, chatEnviados - 1)
+    end
+    bufferChat[#bufferChat + 1] = table.concat({P.Escape(canal), P.Escape(P.Recortar(remitente, 60)),
+        Numero(lineID) or '', P.Escape(P.Recortar(texto, 255))}, ',')
+    Pedir('event', 'chat')
+end
+local function Chat()
+    chatEnviados = #bufferChat
+    local registros = {}
+    for i, r in ipairs(bufferChat) do registros[i] = r end
+    return '', registros
+end
+local function ConfirmarChat()
+    for _ = 1, chatEnviados do table.remove(bufferChat, 1) end
+    chatEnviados = 0
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
     for _, tipo in ipairs(tipos) do
+        if tipo == 'chat' and #bufferChat == 0 then sucio.chat = nil end
         if sucio[tipo] then
             sucio[tipo] = nil
             local cab, registros, faltan, posicion
@@ -522,6 +564,7 @@ local function Enviar()
             local tipo = envio.tipo
             if envio.ok and rellenoOk then
                 ultima[tipo], ultimoEnvio = envio.foto, GetTime()
+                if tipo == 'chat' then ConfirmarChat() end
                 if envio.posicion then
                     ultimaPos = envio.posicion
                 end
@@ -561,7 +604,8 @@ end
 -- Un único timer agrupa eventos; cada tipo conserva su estado y su plazo de reintento.
 Pedir = function(motivo, tipo)
     if not enabled then return end
-    if not tipo then for _, t in ipairs(tipos) do Pedir(motivo, t) end; return end
+    -- chat no entra en los pedidos generales: sólo sale cuando hay mensajes nuevos.
+    if not tipo then for _, t in ipairs(tipos) do if t ~= 'chat' then Pedir(motivo, t) end end; return end
     local plazoAnterior = sucio[tipo] and despues[tipo]
     sucio[tipo] = true
     if motivo == 'send' or motivo == 'retry' or motivo == 'position' or (motivo == 'world' and (tipo == 'look' or tipo == 'hello' or tipo == 'pos')) then forzar[tipo] = true end
@@ -642,11 +686,21 @@ local function Comando(msg)
             sid, seq, L[enabled and 'yes' or 'no'], ultimoEnvio and tostring(ultimoEnvio) or L['none'],
             relleno, fallo or L['none'], duracion, maxima))
     elseif msg == 'app' then AvisoApp()
+    elseif msg == 'chat on' or msg == 'chat off' then
+        WOWCompanionDB.chat = msg == 'chat on'
+        if not WOWCompanionDB.chat then bufferChat, chatEnviados, sucio.chat = {}, 0, nil end
+        Print(L[WOWCompanionDB.chat and 'Chat enabled' or 'Chat disabled'])
+    elseif msg == 'chat canales on' or msg == 'chat canales off' then
+        WOWCompanionDB.chatCanales = msg == 'chat canales on'
+        Print(L[WOWCompanionDB.chatCanales and 'Public channels enabled' or 'Public channels disabled'])
     else Print(L['Usage: /wowc on | off | send | status']) end
 end
 events:On('PLAYER_ENTERING_WORLD', function() ns.LookEvent('PLAYER_ENTERING_WORLD'); Pedir('world'); Direccion(); AgendarGPS() end)
 for _, event in ipairs({'BARBER_SHOP_OPEN', 'BARBER_SHOP_APPEARANCE_APPLIED', 'BARBER_SHOP_CLOSE'}) do
     events:On(event, function() ns.LookEvent(event); Pedir('event', 'look') end)
+end
+for evento in pairs(canalesChat) do
+    events:On(evento, function(...) MensajeChat(evento, ...) end)
 end
 events:On('BAG_UPDATE_DELAYED', function() Pedir('event', 'bags') end)
 for _, evento in ipairs({'UPDATE_PENDING_MAIL', 'MAIL_INBOX_UPDATE', 'MAIL_CLOSED'}) do

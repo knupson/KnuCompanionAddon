@@ -1,9 +1,13 @@
 local _, ns = ...
 local es = {
     ['Enabled'] = 'Activado', ['Disabled'] = 'Desactivado',
-    ['Usage: /wowc on | off | send | status'] = 'Uso: /wowc on | off | send | status | gps off | gps on | app',
-    ['Bag companion: on | off | send | status'] = 'KNU Companion: on | off | send | status | gps off | gps on | app',
+    ['Usage: /wowc on | off | send | status'] = 'Uso: /wowc on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app',
+    ['Bag companion: on | off | send | status'] = 'KNU Companion: on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app',
     ['GPS enabled'] = 'GPS en vivo activado', ['GPS disabled'] = 'GPS en vivo desactivado',
+    ['Chat enabled'] = 'La app recibe hermandad, susurros, grupo y banda',
+    ['Chat disabled'] = 'La app ya no recibe el chat',
+    ['Public channels enabled'] = 'La app también recibe General, Comercio y los demás canales',
+    ['Public channels disabled'] = 'La app ya no recibe General, Comercio ni los demás canales',
     ['sid=%s seq=%d enabled=%s last=%s padding=%d bytes failure=%s duration=%.2f ms max=%.2f ms'] =
         'sid=%s seq=%d activo=%s último=%s relleno=%d bytes fallo=%s duración=%.2f ms máxima=%.2f ms',
     ['none'] = 'ninguno', ['yes'] = 'sí', ['no'] = 'no',

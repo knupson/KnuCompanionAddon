@@ -473,7 +473,7 @@ end)
 test('hello en cada entrada al mundo comparte el relleno', function()
     iniciar()
     igual(#FAKE.Photos('hello'),1)
-    igual(FAKE.Photos('hello')[1].text:match('|hello|(.*)$'),'0.9.0,16001#')
+    igual(FAKE.Photos('hello')[1].text:match('|hello|(.*)$'),'0.10.0,16001#')
     local before=#FAKE.lines
     FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1)
     igual(#FAKE.Photos('hello'),2)

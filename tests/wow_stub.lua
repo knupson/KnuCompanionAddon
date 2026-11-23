@@ -136,5 +136,5 @@ function GetLocale() return FAKE.locale end
 function UnitGUID() return "Player-TEST-" .. (type(FAKE.name) == "string" and FAKE.name or "secreto") end
 function GetRealmName() return FAKE.realm end
 
-C_AddOns = {GetAddOnMetadata=function() return "0.9.0" end}
+C_AddOns = {GetAddOnMetadata=function() return "0.10.0" end}
 function GetBuildInfo() return "16.0.1", "1", "", 16001 end

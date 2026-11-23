@@ -28,12 +28,15 @@ local ultimaPos, posVolcada
 local gpsPendiente, ultimoGiro, facingAnterior, volcadoDiferido
 local events = KL:NewEvents()
 local Pedir
-local marcasPendientes, eventoMarcas = {}, false
-local function InfoMarca(id)
+local marcasPendientes, eventoMarcas, marcasIntentos = {}, false, {}
+local function InfoMarca(id, exito)
     id = Numero(id)
     local tiposItem = id and marcasPendientes[id]
     if not tiposItem then return end
     marcasPendientes[id] = nil
+    -- Si el servidor no devuelve el objeto, no se vuelve a pedir: cada pedido dispararía otro evento fallido.
+    marcasIntentos[id] = (marcasIntentos[id] or 0) + 1
+    if exito == false or marcasIntentos[id] > 3 then tiposItem = {} end
     if not next(marcasPendientes) then
         events:Off('GET_ITEM_INFO_RECEIVED', InfoMarca)
         eventoMarcas = false
@@ -47,7 +50,7 @@ local function Marca(link, id, tipo, bag, slot)
     -- No pasar secretos ni links inválidos al clasificador opcional.
     if not link or not link:match('item:%d+') then return '', false end
     local marca = Texto(api.MarkFor(link, bag, slot))
-    local falta = not marca and id and C_Item and C_Item.GetItemInfo and not Texto(C_Item.GetItemInfo(id))
+    local falta = not marca and id and (marcasIntentos[id] or 0) <= 3 and C_Item and C_Item.GetItemInfo and not Texto(C_Item.GetItemInfo(id))
     if falta then
         marcasPendientes[id] = marcasPendientes[id] or {}
         marcasPendientes[id][tipo] = true

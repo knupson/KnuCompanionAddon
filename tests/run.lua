@@ -780,6 +780,19 @@ test('marca nil pendiente reintenta tras evento aunque agotó los intentos', fun
     assert(FAKE.Photos()[4].text:find(',quest', 1, true))
 end)
 
+-- Auditoría de Gemini: si el servidor no devuelve el objeto, no puede quedar un ciclo de pedidos.
+test('marca con evento fallido no se vuelve a pedir', function()
+    FAKE.Item({itemID=123, hyperlink='|Hitem:123|h[Objeto]|h'})
+    KnuJunkAPI = {MarkFor=function() return nil end}
+    iniciar(); FAKE.Advance(20)
+    assert(FAKE.handlers.GET_ITEM_INFO_RECEIVED)
+    local antes = #FAKE.Photos()
+    FAKE.Event('GET_ITEM_INFO_RECEIVED', 123, false)
+    igual(FAKE.handlers.GET_ITEM_INFO_RECEIVED, nil)
+    FAKE.Advance(5)
+    igual(#FAKE.Photos(), antes)
+end)
+
 test('marca nil con datos cargados no pide eventos ni reintentos', function()
     FAKE.Item({itemID=123, hyperlink='|Hitem:123|h[Objeto]|h'})
     FAKE.names[123] = 'Objeto'

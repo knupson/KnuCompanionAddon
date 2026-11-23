@@ -1,6 +1,6 @@
 # Changelog
 
-## Sin publicar
+## 0.14.0
 
 - La app recibe el registro de misiones completo, con la categoría, el nivel, si está lista o fallida y los objetivos.
 

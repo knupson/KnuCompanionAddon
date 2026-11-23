@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest"}
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -388,7 +388,20 @@ local function Correo()
     end
     return nuevo and '1' or '0', registros
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones}
+-- Destino de la flecha de TomTom (WoWPro y otros guían por ahí). TomTom no tiene un getter público del destino
+-- actual: se guarda el último uid del callback ArrowTargetChanged (TomTom/core/callbacks.lua).
+local destinoFlecha
+local function Destino()
+    local uid = Limpiar(destinoFlecha)
+    if type(uid) ~= 'table' then return ',,,,', {} end
+    local map = Numero(uid[1])
+    local x, y = Real(uid[2]), Real(uid[3])
+    if not map or not x or not y or x < 0 or x > 1 or y < 0 or y > 1 then return ',,,,', {} end
+    local function Campo(v) return P.Escape(P.Recortar(Texto(v) or '', 120)) end
+    return table.concat({map, (string.format('%.4f', x):gsub(',', '.')), (string.format('%.4f', y):gsub(',', '.')),
+        Campo(uid.title), Campo(uid.from)}, ','), {}
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -601,6 +614,13 @@ for _, evento in ipairs({'UPDATE_PENDING_MAIL', 'MAIL_INBOX_UPDATE', 'MAIL_CLOSE
 end
 for _, evento in ipairs({'QUEST_LOG_UPDATE', 'QUEST_WATCH_LIST_CHANGED', 'SUPER_TRACKING_CHANGED'}) do
     events:On(evento, function() Pedir('event', 'quest') end)
+end
+-- Se registra al cargar (OptionalDeps: TomTom carga antes) para no perder el destino que restaura al entrar.
+if type(TomTom) == 'table' and type(TomTom.RegisterCallback) == 'function' then
+    pcall(TomTom.RegisterCallback, ns, 'ArrowTargetChanged', function(_, uid)
+        destinoFlecha = uid
+        Pedir('event', 'dest')
+    end)
 end
 events:On('PLAYER_EQUIPMENT_CHANGED', function() Pedir('event', 'equip'); Pedir('event', 'char') end)
 events:On('UNIT_INVENTORY_CHANGED', function(unit)

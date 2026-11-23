@@ -4,7 +4,7 @@ Este addon necesita la app de escritorio KNU Companion. Solo, no muestra nada en
 
 La app la abrís en otro monitor y ahí ves en vivo tus bolsas, el banco, el equipo y el mapa con tu posición mientras jugás.
 
-Descarga de la app: PENDIENTE (URL)
+Descarga de la app: https://github.com/knupson/KnuCompanion/releases/latest
 
 ## Qué le pasa a la app
 

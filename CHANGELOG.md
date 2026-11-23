@@ -1,6 +1,6 @@
 # Changelog
 
-## Sin publicar
+## 0.15.0
 
 - La app recibe el chat de hermandad, oficiales, susurros, grupo, banda y estancia. General, Comercio y los demás canales sólo con `/wowc chat canales on`. `/wowc chat off` lo corta.
 

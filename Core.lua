@@ -260,7 +260,8 @@ local function Personaje()
         P.Escape(P.Recortar(Texto(GetSubZoneText()) or '', 200)),
         P.Escape(P.Recortar(Texto(UnitName('player')) or '', 200)),
         P.Escape(Texto(claseArchivo) or ''), P.Escape(P.Recortar(Texto(raza) or '', 200)), decimal,
-        raceID or '', sexo or '', Numero(UnitXP('player')) or '', Numero(UnitXPMax('player')) or ''}, ','), {}
+        raceID or '', sexo or '', Numero(UnitXP('player')) or '', Numero(UnitXPMax('player')) or '',
+        P.Escape(Texto(GetRealmName()) or '')}, ','), {}
 end
 local function Hello()
     local version

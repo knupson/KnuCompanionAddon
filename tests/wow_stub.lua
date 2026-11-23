@@ -8,6 +8,7 @@ function FAKE.Reset()
     FAKE.raceID, FAKE.sex = 1, 2
     FAKE.equip, FAKE.money, FAKE.level, FAKE.zone, FAKE.subzone = {}, 123456, 31, "Ventormenta", "Distrito"
     FAKE.xp, FAKE.xpMax = 120, 1000
+    FAKE.realm = "Prueba"
     FAKE.now, FAKE.timers, FAKE.lines, FAKE.chat, FAKE.handlers = 0, {}, {}, {}, {}
     FAKE.items, FAKE.sizes, FAKE.names, FAKE.calls = {}, {[0]=4, [1]=0, [2]=0, [3]=0, [4]=0, [5]=0}, {}, 0
     FAKE.fail, FAKE.maxTimers, FAKE.failAt = false, 0, nil
@@ -131,7 +132,7 @@ function GetAverageItemLevel() return 999, FAKE.ilvl end
 function GetLocale() return FAKE.locale end
 
 function UnitGUID() return "Player-TEST-" .. (type(FAKE.name) == "string" and FAKE.name or "secreto") end
-function GetRealmName() return "Prueba" end
+function GetRealmName() return FAKE.realm end
 
 C_AddOns = {GetAddOnMetadata=function() return "0.9.0" end}
 function GetBuildInfo() return "16.0.1", "1", "", 16001 end

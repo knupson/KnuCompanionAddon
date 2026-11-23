@@ -198,7 +198,7 @@ test('equipo agota tres intentos sin calidad', function()
 end)
 test('personaje escapa zona y sanitiza oro secreto', function()
     FAKE.money=FAKE.secret; FAKE.zone='Zona|con,coma'; iniciar()
-    assert(FAKE.Photos('char')[1].text:find('31,,Zona\\pcon\\ccoma,Distrito,Yaestoy Muerto,PALADIN,Humano,32.2,1,0,120,1000#',1,true))
+    assert(FAKE.Photos('char')[1].text:find('31,,Zona\\pcon\\ccoma,Distrito,Yaestoy Muerto,PALADIN,Humano,32.2,1,0,120,1000,Prueba#',1,true))
     FAKE.money=42; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(1)
     igual(#FAKE.Photos('char'),2); igual(#FAKE.Photos('bags'),1)
 end)
@@ -322,15 +322,15 @@ end)
 
 test('char usa raza numérica y sexo normalizado', function()
     FAKE.raceID, FAKE.sex = 5, 3
-    iniciar(); assert(FAKE.Photos('char')[1].text:find(',32.2,5,1,120,1000#',1,true))
+    iniciar(); assert(FAKE.Photos('char')[1].text:find(',32.2,5,1,120,1000,Prueba#',1,true))
 end)
 
-test('char doce campos con equipado decimal y escalares secretos', function()
+test('char trece campos con equipado decimal y escalares secretos', function()
     FAKE.name, FAKE.class, FAKE.race, FAKE.ilvl = FAKE.secret, FAKE.secret, FAKE.secret, FAKE.secret
     FAKE.raceID, FAKE.sex, FAKE.xp, FAKE.xpMax = FAKE.secret, FAKE.secret, FAKE.secret, FAKE.secret
-    iniciar(); assert(FAKE.Photos('char')[1].text:find('31,123456,Ventormenta,Distrito,,,,,,,,#',1,true))
+    iniciar(); assert(FAKE.Photos('char')[1].text:find('31,123456,Ventormenta,Distrito,,,,,,,,,Prueba#',1,true))
     FAKE.ilvl=15.67; FAKE.xp=200; FAKE.xpMax=1000; FAKE.Event('PLAYER_XP_UPDATE'); FAKE.Advance(1)
-    assert(FAKE.Photos('char')[2].text:find(',15.7,,,200,1000#',1,true))
+    assert(FAKE.Photos('char')[2].text:find(',15.7,,,200,1000,Prueba#',1,true))
 end)
 
 
@@ -724,6 +724,19 @@ test('General.log simulado usa CRLF y relleno x', function()
     Ubicar(); iniciar()
     assert(not FAKE.log:gsub('\r\n',''):find('[\r\n]'))
     assert(FAKE.log:find('KCP'..string.rep('x',4086)..'\r\n',1,true))
+end)
+
+test('char escapa el reino y limpia nil o secretos', function(P)
+    FAKE.realm = "Reino,con|#;"
+    iniciar()
+    assert(FAKE.Photos('char')[1].text:find(',' .. P.Escape(FAKE.realm) .. '#', 1, true))
+    FAKE.realm = FAKE.secret
+    FAKE.Event('PLAYER_XP_UPDATE'); FAKE.Advance(1)
+    assert(FAKE.Photos('char')[2].text:find(',120,1000,#', 1, true))
+    FAKE.realm = nil
+    FAKE.xp = 121
+    FAKE.Event('PLAYER_XP_UPDATE'); FAKE.Advance(1)
+    assert(FAKE.Photos('char')[3].text:find(',121,1000,#', 1, true))
 end)
 
 print(string.format('%d pruebas, %d fallas',total,fallas))

@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst"}
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -482,7 +482,16 @@ local function ConfirmarChat()
     for _ = 1, chatEnviados do table.remove(bufferChat, 1) end
     chatEnviados = 0
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat}
+-- Instancia actual para que la app abra el mapa de la mazmorra. GetInstanceInfo: 1.º nombre, 2.º tipo, 8.º instanceID
+-- (mismo orden que leen DBM y Details). Fuera de instancia el 8.º es el continente: se manda ',none,'.
+local function Instancia()
+    if not GetInstanceInfo then return ',none,', {} end
+    local nombre, tipo, _, _, _, _, _, id = GetInstanceInfo()
+    tipo = Texto(tipo)
+    if not tipo or tipo == 'none' then return (tipo and ',none,' or ',,'), {} end
+    return table.concat({Numero(id) or '', P.Escape(tipo), P.Escape(P.Recortar(Texto(nombre) or '', 120))}, ','), {}
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -723,7 +732,7 @@ end)
 for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'PLAYER_XP_UPDATE', 'ZONE_CHANGED', 'ZONE_CHANGED_NEW_AREA', 'ZONE_CHANGED_INDOORS'}) do
     events:On(evento, function()
         Pedir('event', 'char')
-        if evento:match('^ZONE_CHANGED') then EventoPosicion(); Pedir('event', 'quest') end
+        if evento:match('^ZONE_CHANGED') then EventoPosicion(); Pedir('event', 'quest'); Pedir('event', 'inst') end
     end)
 end
 for _, evento in ipairs({'PLAYER_STARTED_MOVING', 'PLAYER_STOPPED_MOVING', 'PLAYER_STOPPED_TURNING'}) do

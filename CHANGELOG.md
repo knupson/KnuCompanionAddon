@@ -1,5 +1,9 @@
 # Changelog
 
+## Sin publicar
+
+- La app sabe en qué mazmorra o banda estás, para abrir su mapa sola.
+
 ## 0.15.0
 
 - La app recibe el chat de hermandad, oficiales, susurros, grupo, banda y estancia. General, Comercio y los demás canales sólo con `/wowc chat canales on`. `/wowc chat off` lo corta.

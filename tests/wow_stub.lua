@@ -10,6 +10,9 @@ function FAKE.Reset()
     FAKE.now, FAKE.timers, FAKE.lines, FAKE.chat, FAKE.handlers = 0, {}, {}, {}, {}
     FAKE.items, FAKE.sizes, FAKE.names, FAKE.calls = {}, {[0]=4, [1]=0, [2]=0, [3]=0, [4]=0, [5]=0}, {}, 0
     FAKE.fail, FAKE.maxTimers, FAKE.failAt = false, 0, nil
+    FAKE.map, FAKE.x, FAKE.y, FAKE.facing = nil, nil, nil, nil
+    FAKE.moving, FAKE.taxi, FAKE.vehicle, FAKE.pointSecret = false, false, false, false
+    FAKE.log = ''
     canaccessvalue = function(v) return not rawequal(v, FAKE.secret) end
     issecretvalue = function(v) return rawequal(v, FAKE.secret) end
     SlashCmdList, NUM_BAG_SLOTS = {}, 4
@@ -44,7 +47,21 @@ C_Log = {LogMessage=function(line)
     FAKE.calls = FAKE.calls + 1
     if FAKE.fail or FAKE.failAt == FAKE.calls then error('Fallo simulado') end
     FAKE.lines[#FAKE.lines + 1] = {text=line, time=FAKE.now}
+    -- General.log agrega CRLF; no simular saltos LF sueltos al medir el canal.
+    FAKE.log = FAKE.log .. line .. '\r\n'
 end}
+C_Map = {
+    GetBestMapForUnit=function(unit) assert(unit == 'player'); return FAKE.map end,
+    GetPlayerMapPosition=function(map, unit)
+        assert(map == FAKE.map and unit == 'player')
+        if FAKE.pointSecret then return FAKE.secret end
+        return {GetXY=function() return FAKE.x, FAKE.y end}
+    end,
+}
+function GetPlayerFacing() return FAKE.facing end
+function IsPlayerMoving() return FAKE.moving end
+function UnitOnTaxi(unit) assert(unit == 'player'); return FAKE.taxi end
+function UnitInVehicle(unit) assert(unit == 'player'); return FAKE.vehicle end
 local KL = {}
 function KL:NewLocale(es, en)
     -- Simula un cliente en inglés: también tiene que recibir los textos castellanos.
@@ -113,5 +130,5 @@ function GetLocale() return FAKE.locale end
 function UnitGUID() return "Player-TEST-" .. (type(FAKE.name) == "string" and FAKE.name or "secreto") end
 function GetRealmName() return "Prueba" end
 
-C_AddOns = {GetAddOnMetadata=function() return "0.8.0" end}
+C_AddOns = {GetAddOnMetadata=function() return "0.9.0" end}
 function GetBuildInfo() return "16.0.1", "1", "", 16001 end

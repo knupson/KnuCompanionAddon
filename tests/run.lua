@@ -58,13 +58,13 @@ test('predicados de secretos y fallback', function(P)
     assert(not P.EsSecreto(1,nil,nil))
 end)
 test('foto inicial y doce líneas de relleno', function()
-    FAKE.Item(); iniciar(); igual(#FAKE.lines,18)
+    FAKE.Item(); iniciar(); igual(#FAKE.lines,19)
     assert(datos():find('Cajón arrebatado',1,true))
     assert(FAKE.lines[1].text:match('^KC1|%x%x%x%x%x%x%x%x|1|1|1|bags|'))
-    for i=7,18 do igual(#FAKE.lines[i].text,4089); igual(FAKE.lines[i].text:sub(1,3),'KCP') end
+    for i=8,19 do igual(#FAKE.lines[i].text,4089); igual(FAKE.lines[i].text:sub(1,3),'KCP') end
 end)
 test('sin cambios no hay datos ni relleno', function()
-    FAKE.Item(); iniciar(); FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.lines,18)
+    FAKE.Item(); iniciar(); FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.lines,19)
 end)
 test('ráfaga agrupa eventos en un timer', function()
     for _=1,100 do FAKE.Event('BAG_UPDATE_DELAYED') end
@@ -85,19 +85,19 @@ end)
 test('fallo reintenta dos veces y status informa', function()
     FAKE.fail=true; iniciar(); SlashCmdList.WOWC('status')
     assert(FAKE.chat[#FAKE.chat]:find('Falló',1,true))
-    FAKE.Advance(1.99); igual(FAKE.calls,18)
-    FAKE.Advance(20); igual(FAKE.calls,54); igual(#FAKE.timers,0); igual(FAKE.maxTimers,1)
+    FAKE.Advance(1.99); igual(FAKE.calls,19)
+    FAKE.Advance(20); igual(FAKE.calls,57); igual(#FAKE.timers,0); igual(FAKE.maxTimers,1)
 end)
 test('foto fallida no queda marcada como enviada', function()
     FAKE.fail=true; iniciar(); FAKE.fail=false; FAKE.Advance(2)
-    igual(#FAKE.Photos(),1); assert(FAKE.Photos()[1].text:find('|7|1|1|bags|',1,true))
+    igual(#FAKE.Photos(),1); assert(FAKE.Photos()[1].text:find('|8|1|1|bags|',1,true))
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos(),1)
 end)
 test('fallo en una parte conserva el reintento', function()
     FAKE.failAt=1; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),1)
 end)
 test('fallo de relleno tampoco confirma la foto', function()
-    FAKE.failAt=7; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),2)
+    FAKE.failAt=8; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),2)
 end)
 test('Hello funciona sin C_AddOns o si no devuelve nada', function()
     local old = C_AddOns
@@ -110,7 +110,7 @@ test('Hello funciona sin C_AddOns o si no devuelve nada', function()
     assert(FAKE.lines[6].text:match('|hello|0%.0%.0,16'))
 end)
 test('off durante reintento impide el envío', function()
-    FAKE.fail=true; iniciar(); SlashCmdList.WOWC('off'); FAKE.Advance(10); igual(FAKE.calls,18)
+    FAKE.fail=true; iniciar(); SlashCmdList.WOWC('off'); FAKE.Advance(10); igual(FAKE.calls,19)
 end)
 test('nombre por hipervínculo real', function()
     FAKE.Item(); iniciar(); assert(datos():find('Cajón arrebatado: Curiosidades de oficial',1,true))
@@ -150,10 +150,10 @@ test('encabezado genérico grande queda entero y el excesivo falla', function(P)
     assert(not pcall(P.Partes,'0123abcd',1,'bank',string.rep('a',3900),{}))
 end)
 test('todos los tipos comparten doce rellenos y sin cambios no mandan', function()
-    iniciar(); igual(#FAKE.Photos('*'),6); igual(#FAKE.lines,18)
+    iniciar(); igual(#FAKE.Photos('*'),7); igual(#FAKE.lines,19)
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Event('PLAYER_EQUIPMENT_CHANGED')
-    FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Advance(1); igual(#FAKE.lines,18)
-    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('*'),12); igual(#FAKE.lines,36)
+    FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Advance(1); igual(#FAKE.lines,19)
+    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('*'),14); igual(#FAKE.lines,38)
 end)
 test('sin Syndicator manda nosyn una vez', function()
     iniciar(); igual(FAKE.Photos('bank')[1].text:match('|bank|(.*)'), 'nosyn#')
@@ -313,8 +313,8 @@ end)
 test('fallo de parte tip y fallo de relleno no confirman el envío', function()
     FAKE.Item({itemID=1,hyperlink=Link(1)})
     ActivarTips(function() return UnTip() end)
-    FAKE.failAt=7; iniciar(); igual(#FAKE.Photos('tip'),0)
-    FAKE.failAt=21; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
+    FAKE.failAt=8; iniciar(); igual(#FAKE.Photos('tip'),0)
+    FAKE.failAt=23; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
     FAKE.failAt=nil; FAKE.Advance(2); igual(#FAKE.Photos('tip'),2)
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),2)
     SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),3)
@@ -473,11 +473,11 @@ end)
 test('hello en cada entrada al mundo comparte el relleno', function()
     iniciar()
     igual(#FAKE.Photos('hello'),1)
-    igual(FAKE.Photos('hello')[1].text:match('|hello|(.*)$'),'0.8.0,16001#')
+    igual(FAKE.Photos('hello')[1].text:match('|hello|(.*)$'),'0.9.0,16001#')
     local before=#FAKE.lines
     FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1)
     igual(#FAKE.Photos('hello'),2)
-    igual(#FAKE.lines-before,14) -- look + hello + doce KCP
+    igual(#FAKE.lines-before,15) -- look + hello + pos + doce KCP
     for i=#FAKE.lines-11,#FAKE.lines do igual(FAKE.lines[i].text,'KCP' .. string.rep('x',4086)) end
 end)
 
@@ -527,6 +527,203 @@ test('fallo de escritura no persiste tooltips', function()
     C_TooltipInfo = {GetBagItem=function() return {lines={{leftText='Nombre'}}} end}
     FAKE.fail=true; iniciar()
     igual(#WOWCompanionDB.tipsEnviados.claves,0)
+end)
+
+local function Ubicar()
+    FAKE.map, FAKE.x, FAKE.y, FAKE.facing = 37, 0.25, 0.75, 0
+end
+local function PosPayload()
+    local fotos=FAKE.Photos('pos')
+    return fotos[#fotos].text:match('|pos|(.*)$')
+end
+local function Rellenos()
+    local n=0
+    for _, linea in ipairs(FAKE.lines) do if linea.text:match('^KCP') then n=n+1 end end
+    return n
+end
+
+test('pos usa GetXY, coordenadas normalizadas y facing en radianes', function()
+    Ubicar(); FAKE.x, FAKE.y, FAKE.facing=0.123456,0.987654,math.rad(16)
+    iniciar(); igual(PosPayload(),'37,0.1235,0.9877,0.349#')
+    FAKE.facing=math.rad(359); FAKE.Event('PLAYER_STOPPED_MOVING'); FAKE.Advance(1)
+    igual(PosPayload(),'37,0.1235,0.9877,0.000#')
+end)
+
+test('pos sanitiza secretos antes de acceder, comparar o formatear', function()
+    Ubicar(); FAKE.map, FAKE.facing=FAKE.secret,FAKE.secret
+    iniciar(); igual(PosPayload(),',,,#')
+    FAKE.map=37; FAKE.pointSecret=true
+    FAKE.Event('ZONE_CHANGED'); FAKE.Advance(1); igual(PosPayload(),'37,,,#')
+    FAKE.pointSecret=false; FAKE.x,FAKE.y=FAKE.secret,FAKE.secret
+    FAKE.Event('ZONE_CHANGED'); FAKE.Advance(1); igual(PosPayload(),'37,,,#')
+    FAKE.x,FAKE.y=-0.1,1.1
+    FAKE.Event('ZONE_CHANGED'); FAKE.Advance(1); igual(PosPayload(),'37,,,#')
+end)
+
+test('pos nil y no finitos quedan vacíos', function()
+    Ubicar(); FAKE.x,FAKE.y,FAKE.facing=0/0,math.huge,math.huge
+    iniciar(); igual(PosPayload(),'37,,,#')
+    FAKE.map,FAKE.facing=nil,nil
+    FAKE.Event('ZONE_CHANGED'); FAKE.Advance(1); igual(PosPayload(),',,,#')
+end)
+
+test('todos los eventos pedidos envían pos aunque no cambie', function()
+    Ubicar(); iniciar()
+    for i, evento in ipairs({'PLAYER_ENTERING_WORLD','ZONE_CHANGED','ZONE_CHANGED_NEW_AREA',
+        'ZONE_CHANGED_INDOORS','PLAYER_STARTED_MOVING','PLAYER_STOPPED_MOVING'}) do
+        FAKE.Event(evento); FAKE.Advance(1); igual(#FAKE.Photos('pos'),i+1)
+    end
+end)
+
+test('umbral de pos es estricto y se acumula desde el último envío', function()
+    Ubicar(); iniciar()
+    for _,x in ipairs({0.251,0.252}) do
+        FAKE.x=x; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(#FAKE.Photos('pos'),1)
+    end
+    FAKE.x=0.2521; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(#FAKE.Photos('pos'),2)
+    FAKE.y=0.753; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(#FAKE.Photos('pos'),3)
+    FAKE.map=38; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(#FAKE.Photos('pos'),4)
+end)
+
+test('giro sólo envía al cambiar el paso de diez grados', function()
+    Ubicar(); iniciar()
+    FAKE.facing=math.rad(4); FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+    igual(#FAKE.Photos('pos'),1)
+    FAKE.facing=math.rad(6); FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+    igual(#FAKE.Photos('pos'),2); igual(PosPayload(),'37,0.2500,0.7500,0.175#')
+end)
+
+test('sólo pos no escribe relleno ni cambia el reloj del volcado', function()
+    Ubicar(); iniciar()
+    for i=1,9 do
+        FAKE.x=0.25+i*0.003; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+        igual(Rellenos(),12)
+    end
+    FAKE.x=0.28; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+    igual(Rellenos(),24); igual(FAKE.now,11)
+    FAKE.x=0.29; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(Rellenos(),24)
+end)
+
+test('pos comparte relleno con otros tipos y su volcado reinicia los diez segundos', function()
+    Ubicar(); iniciar(); FAKE.Advance(4)
+    FAKE.money=1; FAKE.x=0.3
+    FAKE.Event('PLAYER_MONEY'); FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+    igual(Rellenos(),24)
+    FAKE.Advance(4); FAKE.x=0.4; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+    igual(Rellenos(),24)
+    FAKE.Advance(4); FAKE.x=0.5; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+    igual(Rellenos(),36)
+end)
+
+test('girar quieto vuelca la dirección nueva una vez pasados diez segundos', function()
+    Ubicar(); iniciar(); FAKE.Advance(10)
+    FAKE.facing=math.rad(90); FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+    igual(#FAKE.Photos('pos'),2); igual(Rellenos(),24)
+end)
+
+test('relleno de otro tipo también confirma posiciones previas en el búfer', function()
+    Ubicar(); iniciar()
+    FAKE.x=0.4; FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+    FAKE.money=1; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(1)
+    igual(Rellenos(),24)
+    FAKE.Advance(10); FAKE.facing=math.rad(90)
+    FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1)
+    igual(Rellenos(),36)
+end)
+
+test('GPS quieto no sondea y al frenar se apaga', function()
+    Ubicar(); iniciar(); igual(#FAKE.timers,0)
+    FAKE.Advance(20); igual(#FAKE.Photos('pos'),1)
+    FAKE.moving=true; FAKE.Event('PLAYER_STARTED_MOVING'); FAKE.Advance(1)
+    for i=1,3 do FAKE.x=FAKE.x+0.01; FAKE.Advance(1) end
+    assert(#FAKE.Photos('pos')>2)
+    FAKE.moving=false; FAKE.Event('PLAYER_STOPPED_MOVING'); FAKE.Advance(13)
+    igual(#FAKE.timers,0)
+    local n=#FAKE.lines; FAKE.Advance(30); igual(#FAKE.lines,n)
+end)
+
+-- Auditoría de Gemini (2026-11-23): frenar antes de 10 s del último volcado dejaba la posición final en el búfer.
+test('al frenar antes de 10 s la posición final se vuelca sola', function()
+    Ubicar(); iniciar()
+    FAKE.moving=true; FAKE.Event('PLAYER_STARTED_MOVING'); FAKE.Advance(1)
+    FAKE.x=FAKE.x+0.05; FAKE.moving=false; FAKE.Event('PLAYER_STOPPED_MOVING'); FAKE.Advance(1)
+    local final=PosPayload(); local antes=#FAKE.lines
+    FAKE.Advance(12)
+    assert(#FAKE.lines>antes+11, 'falta el volcado diferido')
+    igual(PosPayload(), final); igual(#FAKE.timers,0)
+end)
+
+test('GPS sigue taxi y vehículo aunque IsPlayerMoving sea falso', function()
+    for _, campo in ipairs({'taxi','vehicle'}) do
+        FAKE.Reset(); Ubicar(); iniciar()
+        FAKE[campo]=true
+        FAKE.Event(campo == 'taxi' and 'UNIT_FLAGS' or 'UNIT_ENTERED_VEHICLE','player')
+        FAKE.Advance(2)
+        FAKE.x=0.4; FAKE.Advance(2); assert(#FAKE.Photos('pos')>=2)
+        FAKE[campo]=false; FAKE.Advance(13); igual(#FAKE.timers,0)
+    end
+end)
+
+test('banderas de otra unidad o sin taxi no despiertan el GPS', function()
+    Ubicar(); iniciar()
+    FAKE.Event('UNIT_FLAGS','player'); FAKE.Event('UNIT_FLAGS','target')
+    FAKE.Event('UNIT_ENTERED_VEHICLE','target'); FAKE.Advance(10)
+    igual(#FAKE.timers,0); igual(#FAKE.Photos('pos'),1)
+end)
+
+test('GPS despierta al girar y se apaga cinco segundos después del cambio real', function()
+    Ubicar(); iniciar(); FAKE.Event('PLAYER_STARTED_TURNING')
+    FAKE.facing=math.rad(20); FAKE.Advance(1)
+    FAKE.facing=math.rad(40); FAKE.Advance(1)
+    FAKE.Advance(3); assert(#FAKE.timers>0)
+    FAKE.Advance(13); igual(#FAKE.timers,0)
+    local n=#FAKE.lines; FAKE.Advance(20); igual(#FAKE.lines,n)
+end)
+
+test('inicio de giro sin giro real no deja un sondeo permanente', function()
+    Ubicar(); iniciar(); FAKE.Event('PLAYER_STARTED_TURNING'); FAKE.Advance(3)
+    igual(#FAKE.timers,0)
+end)
+
+test('gps off descarta envíos pendientes, persiste y conserva eventos de posición', function()
+    Ubicar(); iniciar(); FAKE.moving=true; FAKE.Event('PLAYER_STARTED_MOVING')
+    SlashCmdList.WOWC('gps off'); FAKE.x=0.5; FAKE.Advance(10)
+    igual(WOWCompanionDB.gps,false); igual(#FAKE.Photos('pos'),1); igual(#FAKE.timers,0)
+    recargarTips(); FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(3)
+    igual(WOWCompanionDB.gps,false); igual(#FAKE.timers,0)
+    FAKE.x=0.6; FAKE.Event('PLAYER_STOPPED_MOVING'); FAKE.Advance(1)
+    igual(PosPayload(),'37,0.6000,0.7500,0.000#')
+    SlashCmdList.WOWC('gps on'); igual(WOWCompanionDB.gps,true)
+    FAKE.Advance(1); FAKE.x=0.7; FAKE.Advance(2)
+    igual(PosPayload(),'37,0.7000,0.7500,0.000#')
+end)
+
+test('off general corta el GPS y on lo reactiva sin duplicarlo', function()
+    Ubicar(); FAKE.moving=true; iniciar()
+    SlashCmdList.WOWC('off'); FAKE.Advance(10); igual(#FAKE.timers,0)
+    local n=#FAKE.lines; FAKE.Advance(10); igual(#FAKE.lines,n)
+    SlashCmdList.WOWC('on'); SlashCmdList.WOWC('gps on'); SlashCmdList.WOWC('gps on')
+    FAKE.Advance(1); FAKE.x=0.4; FAKE.Advance(3)
+    local tiempos={}
+    for _, foto in ipairs(FAKE.Photos('pos')) do
+        assert(not tiempos[foto.time]); tiempos[foto.time]=true
+    end
+    FAKE.moving=false; FAKE.Advance(13); igual(#FAKE.timers,0)
+end)
+
+test('fallo de pos sin relleno reintenta y fallo de relleno forzado no confirma', function()
+    Ubicar(); iniciar(); FAKE.x=0.3; FAKE.fail=true
+    FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(#FAKE.Photos('pos'),1)
+    FAKE.fail=false; FAKE.Advance(2); igual(#FAKE.Photos('pos'),2)
+    FAKE.Advance(6); FAKE.x=0.4; FAKE.failAt=FAKE.calls+2
+    FAKE.ns.Pedir('gps','pos'); FAKE.Advance(1); igual(#FAKE.Photos('pos'),3)
+    FAKE.failAt=nil; FAKE.Advance(2); igual(#FAKE.Photos('pos'),4)
+end)
+
+test('General.log simulado usa CRLF y relleno x', function()
+    Ubicar(); iniciar()
+    assert(not FAKE.log:gsub('\r\n',''):find('[\r\n]'))
+    assert(FAKE.log:find('KCP'..string.rep('x',4086)..'\r\n',1,true))
 end)
 
 print(string.format('%d pruebas, %d fallas',total,fallas))

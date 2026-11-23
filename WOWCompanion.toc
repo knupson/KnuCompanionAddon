@@ -4,7 +4,7 @@
 ## Notes-esES: Mirá tus bolsas, banco y equipo en vivo desde el escritorio
 ## Notes-esMX: Mirá tus bolsas, banco y equipo en vivo desde el escritorio
 ## Author: Knunet
-## Version: 0.8.0
+## Version: 0.9.0
 ## SavedVariables: WOWCompanionDB
 ## OptionalDeps: Syndicator
 ## X-License: MIT

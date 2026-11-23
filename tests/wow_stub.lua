@@ -7,6 +7,7 @@ function FAKE.Reset()
     FAKE.name, FAKE.class, FAKE.race, FAKE.ilvl, FAKE.locale = "Yaestoy Muerto", "PALADIN", "Humano", 32.16, "esMX"
     FAKE.raceID, FAKE.sex = 1, 2
     FAKE.equip, FAKE.money, FAKE.level, FAKE.zone, FAKE.subzone = {}, 123456, 31, "Ventormenta", "Distrito"
+    FAKE.xp, FAKE.xpMax = 120, 1000
     FAKE.now, FAKE.timers, FAKE.lines, FAKE.chat, FAKE.handlers = 0, {}, {}, {}, {}
     FAKE.items, FAKE.sizes, FAKE.names, FAKE.calls = {}, {[0]=4, [1]=0, [2]=0, [3]=0, [4]=0, [5]=0}, {}, 0
     FAKE.fail, FAKE.maxTimers, FAKE.failAt = false, 0, nil
@@ -103,6 +104,8 @@ function GetInventoryItemTexture(_, slot) return FAKE.equip[slot] and FAKE.equip
 function GetInventoryItemLink(_, slot) return FAKE.equip[slot] and FAKE.equip[slot].link end
 function GetMoney() return FAKE.money end
 function UnitLevel() return FAKE.level end
+function UnitXP() return FAKE.xp end
+function UnitXPMax() return FAKE.xpMax end
 function GetZoneText() return FAKE.zone end
 function GetSubZoneText() return FAKE.subzone end
 function FAKE.Syndicator(ready, character)

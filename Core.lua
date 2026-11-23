@@ -260,7 +260,7 @@ local function Personaje()
         P.Escape(P.Recortar(Texto(GetSubZoneText()) or '', 200)),
         P.Escape(P.Recortar(Texto(UnitName('player')) or '', 200)),
         P.Escape(Texto(claseArchivo) or ''), P.Escape(P.Recortar(Texto(raza) or '', 200)), decimal,
-        raceID or '', sexo or ''}, ','), {}
+        raceID or '', sexo or '', Numero(UnitXP('player')) or '', Numero(UnitXPMax('player')) or ''}, ','), {}
 end
 local function Hello()
     local version
@@ -480,7 +480,7 @@ events:On('PLAYER_EQUIPMENT_CHANGED', function() Pedir('event', 'equip'); Pedir(
 events:On('UNIT_INVENTORY_CHANGED', function(unit)
     if Texto(unit) == 'player' then Pedir('event', 'equip') end
 end)
-for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'ZONE_CHANGED', 'ZONE_CHANGED_NEW_AREA', 'ZONE_CHANGED_INDOORS'}) do
+for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'PLAYER_XP_UPDATE', 'ZONE_CHANGED', 'ZONE_CHANGED_NEW_AREA', 'ZONE_CHANGED_INDOORS'}) do
     events:On(evento, function()
         Pedir('event', 'char')
         if evento:match('^ZONE_CHANGED') then EventoPosicion() end

@@ -1363,6 +1363,7 @@ end
 -- Repo público sólo con los releases de la app (decisión del user, 2026-11-23).
 local DESCARGA_APP = 'https://github.com/knupson/KnuCompanion/releases/latest'
 -- Los errores van a los issues del repo público del addon (knupson/KnuCompanionAddon).
+local OTROS_ADDONS = 'curseforge.com/members/knupwns/projects'
 local PAGINA_CF, ISSUES = 'https://www.curseforge.com/wow/addons/knucompanion', 'https://github.com/knupson/KnuCompanionAddon/issues'
 local function AvisoApp()
     Print(string.format(L['This addon shows nothing in game: it sends your data to the desktop app. Get it at %s. Repeat this with /wowc app.'], DESCARGA_APP))
@@ -1430,7 +1431,7 @@ local function Comando(msg)
     elseif msg == 'chat canales on' or msg == 'chat canales off' then
         WOWCompanionDB.chatCanales = msg == 'chat canales on'
         Print(L[WOWCompanionDB.chatCanales and 'Public channels enabled' or 'Public channels disabled'])
-    else Print(L['Usage: /wowc on | off | send | status']); AvisoOpinar() end
+    else Print(L['Usage: /wowc on | off | send | status']); AvisoOpinar(); Print(string.format(L['Other KNU addons: %s'], OTROS_ADDONS)) end
 end
 events:On('PLAYER_ENTERING_WORLD', function() ns.LookEvent('PLAYER_ENTERING_WORLD'); Pedir('world'); Direccion(); AgendarGPS() end)
 for _, event in ipairs({'BARBER_SHOP_OPEN', 'BARBER_SHOP_APPEARANCE_APPLIED', 'BARBER_SHOP_CLOSE'}) do

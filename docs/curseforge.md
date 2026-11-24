@@ -37,6 +37,15 @@ If you already have the app, you do not need this page: the app ships the addon 
 
 In-game messages are in Spanish for now. Made for WoW Forever. MIT license.
 
+## Other KNU addons
+
+- [KnuUI](https://www.curseforge.com/wow/addons/knuui): Compact amber layout for ElvUI.
+- [KnuMail](https://www.curseforge.com/wow/addons/knumail): A simple, safe mailbox.
+- [KnuJunk](https://www.curseforge.com/wow/addons/knujunk): Marks and sells what you do not need, and repairs on its own.
+- [KnuCast](https://www.curseforge.com/wow/addons/knucast): Marks on your action bars which spells work against your target.
+
+All my projects: https://www.curseforge.com/members/knupwns/projects
+
 ## Feedback and bugs
 
 If you like it, add it to your favorites (the star on this page) and leave a comment. That helps other Forever players find it. Ideas and requests are welcome in the comments.
@@ -52,6 +61,15 @@ Web: https://companion.knunet.com
 Descarga de la app: https://github.com/knupson/KnuCompanion/releases/latest
 
 Si ya tenés la app, no hace falta bajarlo de acá: la app trae el addon y lo instala con el botón «Instalar addon».
+
+Otros addons de KNU:
+
+- [KnuUI](https://www.curseforge.com/wow/addons/knuui): Layout compacto ámbar para ElvUI.
+- [KnuMail](https://www.curseforge.com/wow/addons/knumail): Buzón simple y seguro.
+- [KnuJunk](https://www.curseforge.com/wow/addons/knujunk): Marca y vende lo que no sirve, y repara solo.
+- [KnuCast](https://www.curseforge.com/wow/addons/knucast): Marca en las barras qué hechizos sirven contra el objetivo.
+
+Todos los proyectos: https://www.curseforge.com/members/knupwns/projects
 
 Si te sirve, marcalo como favorito (la estrella de esta página) y dejá un comentario: así lo encuentran otros jugadores de Forever. Las ideas y los pedidos también van en los comentarios.
 

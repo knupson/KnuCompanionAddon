@@ -23,6 +23,7 @@ local es = {
         'KnuCompanion necesita la app de escritorio, sin ella no muestra nada. Bajala de %s',
     ['Like it? Favorite it or comment at %s. Errors: %s, with the BugSack text.'] =
         '¿Te sirve KnuCompanion? Marcalo como favorito o dejá un comentario en %s. Si algo falla, contalo en %s con el texto del error (BugSack lo copia).',
+    ['Other KNU addons: %s'] = 'Otros addons de KNU: %s',
 }
 -- La UI del addon se mantiene en castellano también con el cliente en otro idioma.
 ns.L = LibStub('KnuLib-1.0'):NewLocale(es, es)

@@ -13,6 +13,15 @@ Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion lo que pasa
 
 La carpeta del addon en el juego se llama `WOWCompanion` (`.pkgmeta`, `package-as`). La app, su instalador y las SavedVariables dependen de ese nombre.
 
+## Otros addons de KNU / Other KNU addons
+
+- [KnuUI](https://www.curseforge.com/wow/addons/knuui): Layout compacto ámbar para ElvUI.
+- [KnuMail](https://www.curseforge.com/wow/addons/knumail): Buzón simple y seguro.
+- [KnuJunk](https://www.curseforge.com/wow/addons/knujunk): Marca y vende lo que no sirve, y repara solo.
+- [KnuCast](https://www.curseforge.com/wow/addons/knucast): Marca en las barras qué hechizos sirven contra el objetivo.
+
+Todos los proyectos / All projects: https://www.curseforge.com/members/knupwns/projects
+
 ## Opiniones y errores
 
 Si te sirve, marcalo como favorito en [CurseForge](https://www.curseforge.com/wow/addons/knucompanion) y dejá un comentario: así lo encuentran otros jugadores de Forever. Las ideas y los pedidos también van en los comentarios. Si encontrás un error, abrí un issue en https://github.com/knupson/KnuCompanionAddon/issues con el texto del error (BugSack lo copia) y qué estabas haciendo.

@@ -5,7 +5,7 @@
 ## Notes-esMX: Le pasa tus bolsas, banco, equipo, posición, misiones y correo a una app de escritorio. Solo no muestra nada en el juego.
 ## IconTexture: Interface\AddOns\WOWCompanion\media\icono
 ## Author: Alejandro Benzoni (KnuPwns)
-## Version: 0.15.2
+## Version: 0.15.3
 ## SavedVariables: WOWCompanionDB
 ## OptionalDeps: Syndicator, TomTom, ShortestPathForever, FarstriderLib
 ## X-License: MIT

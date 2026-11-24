@@ -920,7 +920,7 @@ test('instalado desde la app no muestra el aviso ni después de actualizar', fun
 end)
 test('/wowc app repite el aviso y figura en el uso', function()
     primerIngreso(); FAKE.Advance(8); FAKE.command('app'); igual(avisos(),2)
-    FAKE.command('cualquiera'); assert(FAKE.chat[#FAKE.chat - 1]:find('| app',1,true))
+    FAKE.command('cualquiera'); assert(FAKE.chat[#FAKE.chat - 2]:find('| app',1,true))
 end)
 local function opinar()
     local n = 0
@@ -2187,6 +2187,11 @@ test('recompensas cubre las mismas misiones que log: tope 35, sin encabezados ni
     end)
     C_QuestLog, GetQuestLogRewardXP, GetQuestLogRewardMoney = nil, nil, nil
     if not ok then error(err, 0) end
+end)
+
+test('la ayuda termina con el link a los otros addons de KNU', function()
+    iniciar(); FAKE.command('cualquiera')
+    assert(FAKE.chat[#FAKE.chat]:find('Otros addons de KNU: curseforge.com/members/knupwns/projects', 1, true), FAKE.chat[#FAKE.chat])
 end)
 
 print(string.format('%d pruebas, %d fallas',total,fallas))

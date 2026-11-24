@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.15.3
+
+- Los errores se reportan en el repo del addon, que ahora es público: https://github.com/knupson/KnuCompanionAddon/issues
+- La página del addon apunta a la web de la app: https://companion.knunet.com
+- Al pie de la ayuda (`/wowc` sin nada) figura dónde ver los otros addons de KNU.
+
 ## 0.15.2
 
 - La app ve tu banco aunque no tengas Syndicator: alcanza con abrirlo una vez con cada personaje.

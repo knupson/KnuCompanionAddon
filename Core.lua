@@ -243,16 +243,78 @@ local function Nombre(id, link)
     return P.Escape(P.Recortar(nombre or '', 200)), not nombre or nombre == ''
 end
 
+-- Banco sin Syndicator: con la ventana del banco abierta se leen las pestañas del personaje (C_Bank.FetchPurchasedBankTabData,
+-- C_Container por el ID de cada pestaña, como Camelot/BankFrame.lua de la rama forever) y se guardan en
+-- WOWCompanionDB.bancos por personaje. Así la app ve el banco aunque no esté Syndicator; sin copia todavía, «nodata».
+local function ClavePersonaje()
+    local nombre, reino = Texto(UnitName('player')), Texto(GetRealmName())
+    return nombre and reino and (nombre .. '-' .. reino)
+end
+local function GuardarBanco()
+    if not (C_Bank and C_Bank.FetchPurchasedBankTabData and C_Bank.CanViewBank and Enum and Enum.BankType) then return false end
+    local tipo = Enum.BankType.Character
+    if Limpiar(C_Bank.CanViewBank(tipo)) ~= true then return false end
+    local clave = ClavePersonaje()
+    local pestanas = Limpiar(C_Bank.FetchPurchasedBankTabData(tipo))
+    if not clave or type(pestanas) ~= 'table' or type(WOWCompanionDB) ~= 'table' then return false end
+    local copia = {}
+    for _, datos in ipairs(pestanas) do
+        datos = Limpiar(datos)
+        local bolsa = type(datos) == 'table' and Numero(datos.ID)
+        local slots = bolsa and Numero(C_Container.GetContainerNumSlots(bolsa))
+        if slots then
+            local items = {}
+            for slot = 1, slots do
+                local info = Limpiar(C_Container.GetContainerItemInfo(bolsa, slot))
+                local id = type(info) == 'table' and Numero(info.itemID)
+                if id then
+                    items[slot] = {id=id, cuenta=Numero(info.stackCount), calidad=Numero(info.quality),
+                        icono=Numero(info.iconFileID), link=Texto(info.hyperlink)}
+                end
+            end
+            copia[#copia + 1] = {slots=slots, items=items}
+        end
+    end
+    WOWCompanionDB.bancos = type(WOWCompanionDB.bancos) == 'table' and WOWCompanionDB.bancos or {}
+    WOWCompanionDB.bancos[clave] = {pestanas=copia, visto=Numero(GetServerTime())}
+    return true
+end
+local function BancoPropio()
+    local clave = ClavePersonaje()
+    local bancos = type(WOWCompanionDB) == 'table' and WOWCompanionDB.bancos
+    local copia = clave and type(bancos) == 'table' and bancos[clave]
+    if type(copia) ~= 'table' or type(copia.pestanas) ~= 'table' or #copia.pestanas == 0 then return 'nodata', {} end
+    local cab, registros, faltan = {'ok'}, {}, false
+    for tab, pestana in ipairs(copia.pestanas) do
+        if type(pestana) == 'table' and tonumber(pestana.slots) then
+            cab[#cab + 1] = tab .. ',' .. pestana.slots
+            for slot = 1, pestana.slots do
+                local item = type(pestana.items) == 'table' and pestana.items[slot]
+                if type(item) == 'table' and tonumber(item.id) then
+                    local link = type(item.link) == 'string' and item.link or nil
+                    local nombre, falta = Nombre(item.id, link)
+                    local marca, faltaMarca = Marca(link, item.id, 'bank')
+                    faltan = faltan or falta or faltaMarca
+                    registros[#registros + 1] = table.concat({tab, slot, item.id, tonumber(item.cuenta) or '',
+                        tonumber(item.calidad) or '', tonumber(item.icono) or '', nombre,
+                        P.Escape(PrepararTip(link, 'GetHyperlink', link)), marca}, ',')
+                end
+            end
+        end
+    end
+    if #cab == 1 then return 'nodata', {} end
+    return table.concat(cab, ';'), registros, faltan
+end
 local function Banco()
     LimpiarMarcas('bank')
     local faltan = false
-    if not Syndicator then return 'nosyn', {} end
+    if not Syndicator then return BancoPropio() end
     if not Limpiar(Syndicator.API.IsReady()) then return nil end
     local personaje = Texto(Syndicator.API.GetCurrentCharacter())
     if not personaje then return nil end -- Ready todavía no dejó disponible al personaje.
     local datos = Limpiar(Syndicator.API.GetByCharacterFullName(personaje))
     local tabs = type(datos) == 'table' and Limpiar(datos.bankTabs)
-    if type(tabs) ~= 'table' or not next(tabs) then return 'nodata', {} end
+    if type(tabs) ~= 'table' or not next(tabs) then return BancoPropio() end
     local cab, registros = {'ok'}, {}
     for tab, datosTab in ipairs(tabs) do
         datosTab = Limpiar(datosTab)
@@ -1252,7 +1314,14 @@ end
 for evento in pairs(canalesChat) do
     events:On(evento, function(...) MensajeChat(evento, ...) end)
 end
-events:On('BAG_UPDATE_DELAYED', function() Pedir('event', 'bags') end)
+local bancoAbierto = false
+local function LeerBanco()
+    if bancoAbierto and GuardarBanco() then Pedir('event', 'bank') end
+end
+events:On('BANKFRAME_OPENED', function() bancoAbierto = true; LeerBanco() end)
+events:On('BANKFRAME_CLOSED', function() LeerBanco(); bancoAbierto = false end)
+for _, evento in ipairs({'PLAYERBANKSLOTS_CHANGED', 'BANK_TABS_CHANGED'}) do events:On(evento, LeerBanco) end
+events:On('BAG_UPDATE_DELAYED', function() Pedir('event', 'bags'); LeerBanco() end)
 for _, evento in ipairs({'UPDATE_PENDING_MAIL', 'MAIL_INBOX_UPDATE', 'MAIL_CLOSED'}) do
     events:On(evento, function() Pedir('event', 'mail') end)
 end

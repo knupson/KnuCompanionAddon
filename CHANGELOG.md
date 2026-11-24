@@ -2,6 +2,7 @@
 
 ## 0.15.2
 
+- La app ve tu banco aunque no tengas Syndicator: alcanza con abrirlo una vez con cada personaje.
 - La app dibuja el camino hasta tu destino (la flecha de TomTom o el punto que marcás en el mapa) con el próximo paso. Lo calcula FarstriderLib y, si no lo tenés, ShortestPathForever.
 - Datos nuevos para la app: piedra de hogar (dónde está atada y cuándo vuelve a estar lista), profesiones, reputaciones, integrantes del grupo o la banda, monedas, mejoras activas (fuera de combate), estado JcJ de la zona, hora del próximo reinicio diario y semanal, experiencia descansada y tus personajes con su oro. Cada personaje aparece después de conectarse una vez con esta versión.
 - Cuando morís, la app sabe dónde quedó tu cuerpo y si ya sos fantasma.

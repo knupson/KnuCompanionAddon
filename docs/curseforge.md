@@ -6,7 +6,7 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 
 ## What it sends to the app
 
-- Bags, gear and bank (the bank needs Syndicator), with the game's tooltips.
+- Bags, gear and bank, with the game's tooltips. The bank shows up after you open it once on each character (or right away with Syndicator).
 - Your character: level, gold, experience and rested XP, zone, look, gear durability, professions, reputations, currencies and active buffs (out of combat).
 - The map: your position, the quests of the map you are on, the dungeon or raid you are in, the route of your flight, the PvP state of the zone and where your corpse is when you die.
 - Your quest log, with objectives, and when the next daily and weekly reset is.

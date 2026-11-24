@@ -157,8 +157,8 @@ test('todos los tipos comparten doce rellenos y sin cambios no mandan', function
     FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Advance(1); igual(#FAKE.lines,F()+12)
     SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('*'),2*F()); igual(#FAKE.lines,2*(F()+12))
 end)
-test('sin Syndicator manda nosyn una vez', function()
-    iniciar(); igual(FAKE.Photos('bank')[1].text:match('|bank|(.*)'), 'nosyn#')
+test('sin Syndicator ni banco abierto manda nodata una vez', function()
+    iniciar(); igual(FAKE.Photos('bank')[1].text:match('|bank|(.*)'), 'nodata#')
     FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1); igual(#FAKE.Photos('bank'),1)
 end)
 test('Syndicator espera Ready y personaje disponible', function()
@@ -1668,6 +1668,50 @@ test('rep en el peor caso (100 nombres de 80 comas) se parte sin pasar el límit
     end)
     C_Reputation = nil
     if not ok then error(err, 0) end
+end)
+
+local function BankPayload()
+    local fotos = FAKE.Photos('bank')
+    return fotos[#fotos] and fotos[#fotos].text:match('|bank|(.*)$')
+end
+-- C_Bank con la forma de BankDocumentation.lua (rama forever): pestañas con ID de contenedor 6 y 7.
+local function ConBanco(fn)
+    local abierto = true
+    Enum = Enum or {}
+    local enumAntes = Enum.BankType
+    Enum.BankType = {Character=0, Account=2}
+    C_Bank = {CanViewBank=function(t) igual(t, 0); return abierto end,
+        FetchPurchasedBankTabData=function(t) igual(t, 0); return {{ID=6, name='A'}, {ID=7, name='B'}} end}
+    FAKE.sizes[6], FAKE.sizes[7] = 2, 1
+    FAKE.items['6:2'] = {itemID=2589, stackCount=20, quality=1, iconFileID=132889, hyperlink=Link(2589)}
+    FAKE.items['7:1'] = {itemID=4306, stackCount=5, quality=1, iconFileID=132905, hyperlink=Link(4306)}
+    local ok, err = pcall(fn, function(v) abierto = v end)
+    C_Bank, Enum.BankType = nil, enumAntes
+    if not ok then error(err, 0) end
+end
+test('bank sin Syndicator guarda el banco al abrirlo y lo manda con el formato de siempre', function()
+    ConBanco(function(Abierto)
+        iniciar(); igual(BankPayload(), 'nodata#')
+        FAKE.Event('BANKFRAME_OPENED'); FAKE.Advance(2)
+        local datos = BankPayload()
+        assert(datos:match('^ok;1,2;2,1#'), datos)
+        assert(datos:find('#1,2,2589,20,1,132889,', 1, true), datos)
+        assert(datos:find(';2,1,4306,5,1,132905,', 1, true), datos)
+        assert(WOWCompanionDB.bancos[FAKE.name .. '-' .. FAKE.realm].pestanas[1].slots == 2)
+        -- Cerrado el banco, la copia sigue y un cambio de bolsas no la pisa.
+        FAKE.Event('BANKFRAME_CLOSED'); Abierto(false)
+        FAKE.items['6:2'] = nil; FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(2)
+        assert(BankPayload():find('2589', 1, true))
+        -- Otra sesión: la copia guardada se manda sin abrir el banco.
+        recargarTips(); iniciar(); assert(BankPayload():match('^ok;1,2;2,1#'))
+    end)
+end)
+test('bank con Syndicator sin datos de banco usa la copia propia', function()
+    ConBanco(function()
+        FAKE.Syndicator(true, FAKE.name .. '-' .. FAKE.realm)
+        iniciar(); FAKE.Event('BANKFRAME_OPENED'); FAKE.Advance(2)
+        assert(BankPayload():match('^ok;1,2;2,1#'), BankPayload())
+    end)
 end)
 
 print(string.format('%d pruebas, %d fallas',total,fallas))

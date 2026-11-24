@@ -4,7 +4,7 @@ Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion lo que pasa
 
 - App: código en `knupson/WOWCompanion` (privado); descarga en `knupson/KnuCompanion` (público, sólo releases).
 - Comandos: `/wowc on`, `off`, `send`, `status`, `gps on`, `gps off`, `chat on`, `chat off`, `chat canales on`, `chat canales off`, `app`, `tipos`, `tipo <nombre> on`, `tipo <nombre> off`.
-- Opcionales: Syndicator (banco), TomTom (destino de la flecha), FarstriderLib o ShortestPathForever (camino al destino).
+- Opcionales: Syndicator (banco sin abrirlo antes), TomTom (destino de la flecha), FarstriderLib o ShortestPathForever (camino al destino).
 - Tests: `luajit tests/run.lua` desde la raíz del repo.
 - Íconos: `python tools/generar_media.py` (necesita Pillow). Genera `media/*.tga` y los PNG de `tools/preview/` para CurseForge.
 - Texto de la página de CurseForge: `docs/curseforge.md`.

@@ -50,6 +50,20 @@ Los arma cada función de `Core.lua`: `bags` (`Bolsas`), `bank` (`Banco`), `equi
 
 `char` sumó dos campos al final en 0.15.2: el 14 es la experiencia descansada (`GetXPExhaustion`, vacío sin descanso) y el 15 es `1` o `0` según `IsResting`.
 
+### tip
+
+Tooltips de los objetos que aparecen en `bags`, `bank` y `equip`. Encabezado vacío; un registro por línea del tooltip, hasta 30:
+
+```
+clave,línea,total,textoIzquierda,textoDerecha,colorIzquierda,colorDerecha
+```
+
+- `clave`: `idioma|item:…` (el idioma del cliente y el itemString del enlace), escapada. Es el mismo valor que va en el campo `tip` de los registros de `bags`, `bank` y `equip`, sin el idioma. Hay una foto `tip` por objeto.
+- `línea` y `total`: número de línea desde 1 y cantidad de líneas.
+- Los textos van escapados y recortados a 200 bytes. Los colores son `RRGGBB` en hexadecimal, o vacío.
+
+Se lee con `C_TooltipInfo` (`GetBagItem`, `GetInventoryItem` o `GetHyperlink` según de dónde salga el objeto). Cada tooltip se manda una vez por día y por versión del addon (se recuerda en `WOWCompanionDB.tipsEnviados`; `/wowc send` vacía esa memoria). Una tanda lleva hasta 12 líneas de tooltips; lo que no entra espera la tanda siguiente. Un tooltip que no se pudo leer se reintenta 3 veces cada 2 s.
+
 ## Tipos nuevos
 
 ### inst (0.15.1)

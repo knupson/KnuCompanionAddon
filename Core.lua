@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo", "auras", "pvp", "reinicio", "objetivo"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo", "auras", "pvp", "reinicio", "objetivo", "hermandad", "recompensas", "talentos"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -435,6 +435,19 @@ local function FilaRegistro(i)
 end
 -- Registro completo en su orden, hasta 35 misiones. Las que están bajo una categoría plegada el juego no las lista:
 -- el encabezado lleva cuántas categorías plegadas hay para que la app lo avise (no se despliegan solas).
+-- IDs de las misiones del registro en el mismo orden y con el mismo tope que log (35).
+local function MisionesDelRegistro()
+    local ids = {}
+    if not C_QuestLog or not (C_QuestLog.GetInfo or GetQuestLogTitle) then return ids end
+    local total = C_QuestLog.GetNumQuestLogEntries and Numero((C_QuestLog.GetNumQuestLogEntries()))
+        or GetNumQuestLogEntries and Numero((GetNumQuestLogEntries())) or 0
+    for i = 1, math.min(total, 200) do
+        if #ids >= 35 then break end
+        local _, _, cabecera, _, id = FilaRegistro(i)
+        if not cabecera and id and id > 0 then ids[#ids + 1] = id end
+    end
+    return ids
+end
 local function Registro()
     local registros, plegadas = {}, 0
     if not C_QuestLog or not (C_QuestLog.GetInfo or GetQuestLogTitle) then return '0', registros end
@@ -1082,7 +1095,81 @@ local function Objetivo()
         jugador == true and '1' or (jugador == false and '0' or ''),
         muerto == true and '1' or (muerto == false and '0' or '')}, ','), {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras, pvp=JcJ, reinicio=Reinicio, objetivo=Objetivo}
+-- Hermandad conectada: C_Club (GetGuildClubId, GetClubMembers, GetMemberInfo) como la lista de miembros de Communities
+-- en la rama forever; conectados = presence Online (1), Away (4) o Busy (5). La clase sale de GetClassInfo(classID).
+local MAX_HERMANDAD = 100
+local PRESENTES = {[1]=true, [4]=true, [5]=true}
+local function Hermandad()
+    if not (C_Club and C_Club.GetGuildClubId and C_Club.GetClubMembers and C_Club.GetMemberInfo) then return ',0,0', {} end
+    local club = Limpiar(C_Club.GetGuildClubId())
+    if club == nil then return ',0,0', {} end
+    local info = C_Club.GetClubInfo and Limpiar(C_Club.GetClubInfo(club))
+    local nombreHermandad = type(info) == 'table' and Texto(info.name) or ''
+    local ids = Limpiar(C_Club.GetClubMembers(club))
+    if type(ids) ~= 'table' then return P.Escape(P.Recortar(nombreHermandad, 60)) .. ',0,0', {} end
+    local conectados = {}
+    for _, id in ipairs(ids) do
+        local m = Limpiar(C_Club.GetMemberInfo(club, id))
+        local presencia = type(m) == 'table' and Numero(m.presence)
+        if presencia and PRESENTES[presencia] then
+            local claseID = Numero(m.classID)
+            local claseArchivo = ''
+            if claseID and GetClassInfo then
+                local _, archivo = GetClassInfo(claseID)
+                claseArchivo = Texto(archivo) or ''
+            end
+            conectados[#conectados + 1] = {nombre=Texto(m.name) or '', nivel=Numero(m.level), clase=claseArchivo,
+                zona=Texto(m.zone) or '', rango=Texto(m.guildRank) or '', orden=Numero(m.guildRankOrder), nota=Texto(m.memberNote) or '',
+                presencia=presencia}
+        end
+    end
+    table.sort(conectados, function(a, b)
+        if (a.orden or 99) ~= (b.orden or 99) then return (a.orden or 99) < (b.orden or 99) end
+        return a.nombre < b.nombre
+    end)
+    local registros = {}
+    for i = 1, math.min(#conectados, MAX_HERMANDAD) do
+        local c = conectados[i]
+        registros[i] = table.concat({P.Escape(P.Recortar(c.nombre, 60)), c.nivel or '', P.Escape(c.clase),
+            P.Escape(P.Recortar(c.zona, 80)), P.Escape(P.Recortar(c.rango, 60)), c.orden or '', P.Escape(P.Recortar(c.nota, 120)),
+            c.presencia}, ',')
+    end
+    return table.concat({P.Escape(P.Recortar(nombreHermandad, 60)), #conectados, #ids}, ','), registros
+end
+-- Recompensas de las misiones del registro, con la forma por questID que usa QuestUtils.lua (rama forever): no cambia la
+-- misión seleccionada. Objetos en grupos de 3 (itemID, cantidad, f fijo / e a elegir), hasta 8 por misión.
+local function Recompensas()
+    local registros = {}
+    for _, id in ipairs(MisionesDelRegistro()) do
+        local xp = GetQuestLogRewardXP and Numero((GetQuestLogRewardXP(id))) or ''
+        local dinero = GetQuestLogRewardMoney and Numero(GetQuestLogRewardMoney(id)) or ''
+        local campos = {id, xp, dinero}
+        local function Objetos(cuantos, info, tipo)
+            local n = cuantos and Numero(cuantos(id)) or 0
+            for i = 1, n do
+                if #campos >= 3 + 8 * 3 then return end
+                local ok, _, _, cantidad, _, _, itemID = pcall(info, i, id)
+                itemID = ok and Numero(itemID)
+                if itemID then
+                    campos[#campos + 1], campos[#campos + 2], campos[#campos + 3] = itemID, Numero(cantidad) or '', tipo
+                end
+            end
+        end
+        if GetQuestLogRewardInfo then Objetos(GetNumQuestLogRewards, GetQuestLogRewardInfo, 'f') end
+        if GetQuestLogChoiceInfo then Objetos(GetNumQuestLogChoices, GetQuestLogChoiceInfo, 'e') end
+        registros[#registros + 1] = table.concat(campos, ',')
+    end
+    return tostring(#registros), registros
+end
+-- Puntos de talento sin gastar: C_ClassTalents.HasUnspentTalentPoints() (lo que usa el aviso del botón de talentos).
+local function Talentos()
+    if not (C_ClassTalents and C_ClassTalents.HasUnspentTalentPoints) then return ',,', {} end
+    local ok, tiene, clase, espec = pcall(C_ClassTalents.HasUnspentTalentPoints)
+    if not ok then return ',,', {} end
+    tiene = Limpiar(tiene)
+    return table.concat({tiene == true and '1' or (tiene == false and '0' or ''), Numero(clase) or '', Numero(espec) or ''}, ','), {}
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras, pvp=JcJ, reinicio=Reinicio, objetivo=Objetivo, hermandad=Hermandad, recompensas=Recompensas, talentos=Talentos}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
 local falloTipo -- Último tipo que tiró error al armar su foto, para /wowc status.
 local enviadoTipo = {} -- Último envío confirmado de cada tipo (hora y tamaño), para /wowc diag.
@@ -1364,7 +1451,7 @@ for _, evento in ipairs({'UPDATE_PENDING_MAIL', 'MAIL_INBOX_UPDATE', 'MAIL_CLOSE
     events:On(evento, function() Pedir('event', 'mail') end)
 end
 for _, evento in ipairs({'QUEST_LOG_UPDATE', 'QUEST_WATCH_LIST_CHANGED', 'SUPER_TRACKING_CHANGED'}) do
-    events:On(evento, function() Pedir('event', 'quest'); Pedir('event', 'log') end)
+    events:On(evento, function() Pedir('event', 'quest'); Pedir('event', 'log'); Pedir('event', 'recompensas') end)
 end
 -- ShortestPathForever (OptionalDeps) ya publicó su API. Sólo los cambios de meta o de tramo, nunca 'guidance' (cada curva).
 do
@@ -1390,6 +1477,12 @@ events:On('UNIT_AURA', function(unidad) if Texto(unidad) == 'player' then Pedir(
 events:On('PLAYER_FLAGS_CHANGED', function(unidad) if Texto(unidad) == 'player' then Pedir('event', 'pvp') end end)
 events:On('UNIT_FACTION', function(unidad) if Texto(unidad) == 'player' then Pedir('event', 'pvp') end end)
 events:On('PLAYER_TARGET_CHANGED', function() Pedir('event', 'objetivo') end)
+for _, evento in ipairs({'GUILD_ROSTER_UPDATE', 'CLUB_MEMBER_PRESENCE_UPDATED', 'CLUB_MEMBER_UPDATED'}) do
+    events:On(evento, function() Pedir('event', 'hermandad') end)
+end
+for _, evento in ipairs({'TRAIT_CONFIG_UPDATED', 'TRAIT_TREE_CURRENCY_INFO_UPDATED', 'PLAYER_LEVEL_UP'}) do
+    events:On(evento, function() Pedir('event', 'talentos') end)
+end
 events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
 events:On('UPDATE_FACTION', function() Pedir('event', 'rep') end)
 events:On('CURRENCY_DISPLAY_UPDATE', function() Pedir('event', 'monedas') end)
@@ -1479,6 +1572,7 @@ KL:OnLogin(function()
         end, ns)
     end
     Pedir('login', 'bank')
+    if C_GuildInfo and C_GuildInfo.GuildRoster then pcall(C_GuildInfo.GuildRoster) end
     LibStub('KnuLib-1.0'):RegisterCommand('companion', Comando, L['Bag companion: on | off | send | status'])
     SLASH_WOWC1 = '/wowc'
     SlashCmdList.WOWC = Comando

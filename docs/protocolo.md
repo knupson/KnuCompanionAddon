@@ -162,3 +162,15 @@ Mejoras activas del jugador (`C_UnitAuras.GetAuraDataByIndex` con `HELPFUL`), ha
 ### objetivo (0.15.2)
 
 `nombre,nivel,clasificación,reacción,npcID,jugador,muerto#`. `nivel` -1 es «??». `clasificación` es lo que devuelve `UnitClassification` (`normal`, `elite`, `rare`, `rareelite`, `worldboss`…). `reacción` va de 1 a 8. `npcID` sale de `C_CreatureInfo.GetCreatureID(UnitGUID('target'))`; vacío para jugadores o con la identidad restringida. `jugador` y `muerto` van como `1`/`0`. Sin blanco: `,,,,,,#`. Se manda con `PLAYER_TARGET_CHANGED` y con `UNIT_FLAGS` del blanco.
+
+### hermandad (0.15.2)
+
+`nombreHermandad,conectados,total#nombre,nivel,claseArchivo,zona,rango,ordenRango,nota,estado;…`. Sólo los conectados (`presence` 1 conectado, 4 ausente, 5 ocupado), ordenados por `ordenRango` (los que no lo tienen, al final) y nombre, hasta 100. `C_Club.GetGuildClubId`/`GetClubMembers`/`GetMemberInfo`; la clase sale de `GetClassInfo(classID)`. Sin hermandad: `,0,0#`. Se manda con `GUILD_ROSTER_UPDATE`, `CLUB_MEMBER_PRESENCE_UPDATED` y `CLUB_MEMBER_UPDATED`; al entrar se pide `C_GuildInfo.GuildRoster()`.
+
+### recompensas (0.15.2)
+
+`cantidad#questID,xp,dineroCobre,itemID,cantidad,tipo,…;…`. Las mismas misiones que `log` (hasta 35), con objetos en grupos de 3 (`tipo` `f` fijo, `e` a elegir), hasta 8 por misión. Usa la forma por `questID` (`GetQuestLogRewardXP`, `GetQuestLogRewardMoney`, `GetQuestLogRewardInfo`, `GetQuestLogChoiceInfo`), que no cambia la misión seleccionada. Se manda con los eventos de `log`.
+
+### talentos (0.15.2)
+
+`tiene,deClase,deEspecializacion#` de `C_ClassTalents.HasUnspentTalentPoints()`. `tiene` es `1`/`0`. Sin la API: `,,#`. Se manda con `TRAIT_CONFIG_UPDATED`, `TRAIT_TREE_CURRENCY_INFO_UPDATED` y `PLAYER_LEVEL_UP`.

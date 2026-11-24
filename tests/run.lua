@@ -2087,5 +2087,90 @@ test('objetivo manda el blanco con su npcID y se actualiza al cambiar o morir', 
     if not ok then error(err, 0) end
 end)
 
+local function Payload(tipo)
+    local fotos = FAKE.Photos(tipo)
+    return fotos[#fotos] and fotos[#fotos].text:match('|' .. tipo .. '|(.*)$')
+end
+test('hermandad sin hermandad manda vacío', function() iniciar(); igual(Payload('hermandad'), ',0,0#') end)
+test('hermandad manda sólo los conectados, ordenados por rango y nombre', function()
+    local miembros = {
+        a={name='Zoe', level=60, classID=8, zone='Orgrimmar', guildRank='Miembro', guildRankOrder=3, memberNote='alt, de Ana', presence=1},
+        b={name='Ana', level=58, classID=1, zone='Durotar', guildRank='Oficial', guildRankOrder=2, memberNote='', presence=4},
+        c={name='Bob', level=60, classID=8, zone='Los Baldíos', guildRank='Miembro', guildRankOrder=3, memberNote='', presence=3},
+        d={name='Cid', level=12, classID=99, zone=FAKE.secret, guildRank='Miembro', guildRankOrder=3, memberNote='', presence=5},
+    }
+    local pedidos = 0
+    C_Club = {GetGuildClubId=function() return 'club1' end, GetClubInfo=function() return {name='Los, Kodos'} end,
+        GetClubMembers=function(c) igual(c, 'club1'); return {'a', 'b', 'c', 'd'} end,
+        GetMemberInfo=function(c, id) return miembros[id] end}
+    C_GuildInfo = {GuildRoster=function() pedidos = pedidos + 1 end}
+    GetClassInfo = function(id) if id == 8 then return 'Mago', 'MAGE' elseif id == 1 then return 'Guerrero', 'WARRIOR' end end
+    local ok, err = pcall(function()
+        recargarTips(); iniciar()
+        igual(pedidos, 1)
+        igual(Payload('hermandad'), 'Los\\c Kodos,3,4#Ana,58,WARRIOR,Durotar,Oficial,2,,4;Cid,12,,,Miembro,3,,5;Zoe,60,MAGE,Orgrimmar,Miembro,3,alt\\c de Ana,1')
+        miembros.c.presence = 1; FAKE.Event('CLUB_MEMBER_PRESENCE_UPDATED'); FAKE.Advance(2)
+        assert(Payload('hermandad'):match('^Los\\c Kodos,4,4#'), Payload('hermandad'))
+    end)
+    C_Club, C_GuildInfo, GetClassInfo = nil, nil, nil
+    if not ok then error(err, 0) end
+end)
+test('recompensas manda XP, dinero y objetos fijos y a elegir de las misiones del registro', function()
+    local filas = {{titulo='Durotar', cabecera=true}, {titulo='Kodos', id=10}, {titulo='Lobos', id=11}}
+    C_QuestLog = {GetNumQuestLogEntries=function() return #filas end,
+        GetInfo=function(i) local f = filas[i]; return {title=f.titulo, isHeader=f.cabecera or false, questID=f.id, level=10} end}
+    GetQuestLogRewardXP = function(id) return id == 10 and 1200 or 0 end
+    GetQuestLogRewardMoney = function(id) return id == 10 and 350 or 0 end
+    GetNumQuestLogRewards = function(id) return id == 10 and 1 or 0 end
+    GetQuestLogRewardInfo = function(i, id) return 'Poción', 1, 3, 1, true, 118 end
+    GetNumQuestLogChoices = function(id) return id == 10 and 2 or 0 end
+    GetQuestLogChoiceInfo = function(i, id) if i == 1 then return 'Botas', 1, 1, 2, true, 2000 end; return 'Secreto', 1, 1, 2, true, FAKE.secret end
+    local ok, err = pcall(function()
+        iniciar(); igual(Payload('recompensas'), '2#10,1200,350,118,3,f,2000,1,e;11,0,0')
+    end)
+    C_QuestLog, GetQuestLogRewardXP, GetQuestLogRewardMoney, GetNumQuestLogRewards, GetQuestLogRewardInfo = nil, nil, nil, nil, nil
+    GetNumQuestLogChoices, GetQuestLogChoiceInfo = nil, nil
+    if not ok then error(err, 0) end
+end)
+test('recompensas corta en 8 objetos por misión', function()
+    local filas = {{titulo='Muchas', id=10}}
+    C_QuestLog = {GetNumQuestLogEntries=function() return 1 end,
+        GetInfo=function(i) return {title='Muchas', isHeader=false, questID=10, level=1} end}
+    GetQuestLogRewardXP, GetQuestLogRewardMoney = function() return 0 end, function() return 0 end
+    GetNumQuestLogRewards = function() return 12 end
+    GetQuestLogRewardInfo = function(i) return 'x', 1, 1, 1, true, 100 + i end
+    local ok, err = pcall(function()
+        iniciar()
+        local _, grupos = Payload('recompensas'):gsub(',f', ',f')
+        igual(grupos, 8)
+    end)
+    C_QuestLog, GetQuestLogRewardXP, GetQuestLogRewardMoney, GetNumQuestLogRewards, GetQuestLogRewardInfo = nil, nil, nil, nil, nil
+    if not ok then error(err, 0) end
+end)
+test('talentos manda si hay puntos sin gastar y cuántos', function()
+    local tiene, clase, espec = true, 2, 1
+    C_ClassTalents = {HasUnspentTalentPoints=function() return tiene, clase, espec end}
+    local ok, err = pcall(function()
+        iniciar(); igual(Payload('talentos'), '1,2,1#')
+        tiene, clase, espec = false, 0, 0; FAKE.Event('TRAIT_CONFIG_UPDATED'); FAKE.Advance(2)
+        igual(Payload('talentos'), '0,0,0#')
+    end)
+    C_ClassTalents = nil
+    if not ok then error(err, 0) end
+end)
+test('talentos sin la API manda vacío', function() iniciar(); igual(Payload('talentos'), ',,#') end)
+
+test('hermandad: un conectado sin orden de rango va al final', function()
+    local miembros = {a={name='Ana', level=1, classID=1, zone='', guildRank='', guildRankOrder=nil, memberNote='', presence=1},
+        b={name='Zoe', level=1, classID=1, zone='', guildRank='', guildRankOrder=5, memberNote='', presence=1}}
+    C_Club = {GetGuildClubId=function() return 'c' end, GetClubMembers=function() return {'a', 'b'} end,
+        GetMemberInfo=function(_, id) return miembros[id] end}
+    local ok, err = pcall(function()
+        iniciar(); assert(Payload('hermandad'):match('#Zoe,.*;Ana,'), Payload('hermandad'))
+    end)
+    C_Club = nil
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

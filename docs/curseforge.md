@@ -9,7 +9,8 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 - Bags, gear and bank, with the game's tooltips. The bank shows up after you open it once on each character (or right away with Syndicator).
 - Your character: level, gold, experience and rested XP, zone, appearance, gear durability, professions, reputations, currencies and active buffs (out of combat).
 - The map: your position, the quests of the map you are on, the dungeon or raid you are in, the route of your flight, the PvP state of the zone and where your corpse is when you die.
-- Your quest log with objectives, and the time of the next daily and weekly reset.
+- Your quest log with objectives and rewards, and the time of the next daily and weekly reset.
+- Who in your guild is online, and unspent talent points.
 - Your Hearthstone: where it is bound and when it is ready again.
 - Your current target: name, level, elite or rare, and whether it is dead.
 - Your party or raid, and the other characters on this account with their gold. Each character shows up after it logs in once.

@@ -1,8 +1,14 @@
 # KnuCompanion (addon)
 
+**Este addon es la mitad de KnuCompanion: la app de escritorio te muestra en otro monitor tus bolsas, el banco, el equipo, el mapa y las misiones mientras jugás.**
+
+- **Bajá la app:** https://github.com/knupson/KnuCompanion/releases/latest (trae este addon y lo instala sola)
+- **Web:** https://companion.knunet.com
+
+**This addon is half of KnuCompanion. Get the desktop app:** https://github.com/knupson/KnuCompanion/releases/latest · https://companion.knunet.com
+
 Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion lo que pasa en tu personaje: bolsas, banco, equipo, posición, misiones, chat, grupo y el camino a tu destino, entre otras cosas (lista completa en `docs/protocolo.md`). Los escribe en `Logs/General.log` y la app los lee de ahí. Solo, no muestra nada en el juego.
 
-- Web de la app: https://companion.knunet.com
 - App: código en `knupson/WOWCompanion` (privado); descarga en `knupson/KnuCompanion` (público, sólo releases).
 - Comandos: `/wowc on`, `off`, `send`, `status`, `gps on`, `gps off`, `chat on`, `chat off`, `chat canales on`, `chat canales off`, `app`, `diag`, `tipos`, `tipo <nombre> on`, `tipo <nombre> off`.
 - Opcionales: Syndicator (banco sin abrirlo antes), TomTom (destino de la flecha), FarstriderLib o ShortestPathForever (camino al destino).

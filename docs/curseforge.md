@@ -4,7 +4,7 @@ Keep the app open on a second monitor and you see your bags, bank, gear and a ma
 
 Website: https://companion.knunet.com
 
-Get the app: https://github.com/knupson/KnuCompanion/releases/latest
+**Get the app: https://github.com/knupson/KnuCompanion/releases/latest**
 
 ## What it sends to the app
 
@@ -58,7 +58,7 @@ Este addon necesita la app de escritorio KnuCompanion. Solo, no muestra nada en 
 
 Web: https://companion.knunet.com
 
-Descarga de la app: https://github.com/knupson/KnuCompanion/releases/latest
+**Descarga de la app: https://github.com/knupson/KnuCompanion/releases/latest**
 
 Si ya tenés la app, no hace falta bajarlo de acá: la app trae el addon y lo instala con el botón «Instalar addon».
 

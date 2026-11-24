@@ -1,7 +1,7 @@
 """Mutaciones automáticas de operadores sobre Core.lua: cambia un operador por vez, corre luajit tests/run.lua en una
 copia y anota las mutaciones que ninguna prueba detecta («vivas»). Sirve para encontrar huecos en las pruebas.
 
-Uso: python tools/mutar_auto.py [--archivo Proto.lua] [--desde N] [--hasta N]   (desde la raíz del repo)
+Uso: python tools/mutar_auto.py [--archivo Proto.lua] [--lineas A-B] [--desde N] [--hasta N]   (desde la raíz del repo)
 Escribe el avance en <TEMP>/wowc-mutar-auto/latido.txt y el resultado en <TEMP>/wowc-mutar-auto/vivas.txt.
 """
 import os, re, shutil, subprocess, sys, time
@@ -53,6 +53,9 @@ def main():
     if correr() != 0:
         sys.exit('Las pruebas fallan sin mutar: arreglalas antes de correr las mutaciones.')
     lista = list(mutaciones(lineas))[desde:hasta]
+    if '--lineas' in sys.argv:
+        a, b = (int(x) for x in sys.argv[sys.argv.index('--lineas') + 1].split('-'))
+        lista = [m for m in lista if a <= m[0] + 1 <= b]
     vivas, inicio = [], time.time()
     latido = os.path.join(BASE, 'latido.txt')
     for i, (n, mutada, desc) in enumerate(lista):

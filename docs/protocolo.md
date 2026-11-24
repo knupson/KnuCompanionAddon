@@ -158,3 +158,7 @@ Mejoras activas del jugador (`C_UnitAuras.GetAuraDataByIndex` con `HELPFUL`), ha
 ### reinicio (0.15.2)
 
 `diarioEpoch,semanalEpoch#`: hora del servidor del próximo reinicio diario y semanal (`C_DateAndTime.GetSecondsUntilDailyReset`/`GetSecondsUntilWeeklyReset`), redondeada al minuto. Sin la API: `,#`. Se manda al entrar y otra vez 5 s después de cada reinicio diario.
+
+### objetivo (0.15.2)
+
+`nombre,nivel,clasificación,reacción,npcID,jugador,muerto#`. `nivel` -1 es «??». `clasificación` es lo que devuelve `UnitClassification` (`normal`, `elite`, `rare`, `rareelite`, `worldboss`…). `reacción` va de 1 a 8. `npcID` sale de `C_CreatureInfo.GetCreatureID(UnitGUID('target'))`; vacío para jugadores o con la identidad restringida. `jugador` y `muerto` van como `1`/`0`. Sin blanco: `,,,,,,#`. Se manda con `PLAYER_TARGET_CHANGED` y con `UNIT_FLAGS` del blanco.

@@ -11,6 +11,7 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 - The map: your position, the quests of the map you are on, the dungeon or raid you are in, the route of your flight, the PvP state of the zone and where your corpse is when you die.
 - Your quest log with objectives, and the time of the next daily and weekly reset.
 - Your Hearthstone: where it is bound and when it is ready again.
+- Your current target: name, level, elite or rare, and whether it is dead.
 - Your party or raid, and the other characters on this account with their gold. Each character shows up after it logs in once.
 - Navigation: the TomTom arrow target, and the path to your destination if you have FarstriderLib or ShortestPathForever.
 - New mail alert with the senders, and guild, officer, whisper, party, raid and instance chat. General, Trade and the other public channels only if you turn them on.

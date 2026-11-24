@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo", "auras", "pvp", "reinicio"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo", "auras", "pvp", "reinicio", "objetivo"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -1059,7 +1059,30 @@ local function Reinicio()
     end
     return diarioEpoch .. ',' .. Epoch(semanal), {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras, pvp=JcJ, reinicio=Reinicio}
+-- Blanco actual: nombre, nivel (-1 = ??), clasificación (normal, elite, rare, rareelite, worldboss...), reacción hacia el
+-- jugador (1 odiado .. 8 exaltado), id del NPC (C_CreatureInfo.GetCreatureID, como la interfaz de la rama forever), si es
+-- jugador y si está muerto. Sin blanco: «,,,,,,». UnitGUID es secreto con la identidad restringida: ahí el id va vacío.
+local function Objetivo()
+    if not (UnitExists and Limpiar(UnitExists('target')) == true) then return ',,,,,,', {} end
+    local nivel = Real(UnitLevel('target'))
+    local jugador = UnitIsPlayer and Limpiar(UnitIsPlayer('target'))
+    local npc = ''
+    if jugador ~= true and UnitGUID and C_CreatureInfo and C_CreatureInfo.GetCreatureID then
+        local guid = Texto(UnitGUID('target'))
+        if guid then
+            -- Fuera de un «and»: «x and pcall(...)» se queda con un solo valor y perdería el id.
+            local ok, id = pcall(C_CreatureInfo.GetCreatureID, guid)
+            npc = ok and Numero(id) or ''
+        end
+    end
+    local muerto = UnitIsDead and Limpiar(UnitIsDead('target'))
+    return table.concat({P.Escape(P.Recortar(Texto(UnitName('target')) or '', 80)), nivel and math.floor(nivel) or '',
+        P.Escape(Texto(UnitClassification and UnitClassification('target')) or ''),
+        Numero(UnitReaction and UnitReaction('target', 'player')) or '', npc,
+        jugador == true and '1' or (jugador == false and '0' or ''),
+        muerto == true and '1' or (muerto == false and '0' or '')}, ','), {}
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras, pvp=JcJ, reinicio=Reinicio, objetivo=Objetivo}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
 local falloTipo -- Último tipo que tiró error al armar su foto, para /wowc status.
 local enviadoTipo = {} -- Último envío confirmado de cada tipo (hora y tamaño), para /wowc diag.
@@ -1366,6 +1389,7 @@ end)
 events:On('UNIT_AURA', function(unidad) if Texto(unidad) == 'player' then Pedir('event', 'auras') end end)
 events:On('PLAYER_FLAGS_CHANGED', function(unidad) if Texto(unidad) == 'player' then Pedir('event', 'pvp') end end)
 events:On('UNIT_FACTION', function(unidad) if Texto(unidad) == 'player' then Pedir('event', 'pvp') end end)
+events:On('PLAYER_TARGET_CHANGED', function() Pedir('event', 'objetivo') end)
 events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
 events:On('UPDATE_FACTION', function() Pedir('event', 'rep') end)
 events:On('CURRENCY_DISPLAY_UPDATE', function() Pedir('event', 'monedas') end)
@@ -1416,6 +1440,7 @@ end
 events:On('UNIT_FLAGS', function(unit)
     if Texto(unit) == 'player' and Limpiar(UnitOnTaxi('player')) == true then AgendarGPS() end
     if Texto(unit) == 'player' then RevisarVuelo() end
+    if Texto(unit) == 'target' then Pedir('event', 'objetivo') end
 end)
 events:On('PLAYER_CONTROL_GAINED', RevisarVuelo)
 if type(hooksecurefunc) == 'function' and type(TakeTaxiNode) == 'function' then

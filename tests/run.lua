@@ -2053,5 +2053,39 @@ test('ruta acepta ShortestPathForever con versión 1', function()
     end)
 end)
 
+local function ObjetivoPayload()
+    local fotos = FAKE.Photos('objetivo')
+    return fotos[#fotos] and fotos[#fotos].text:match('|objetivo|(.*)$')
+end
+test('objetivo sin blanco manda vacío', function() iniciar(); igual(ObjetivoPayload(), ',,,,,,#') end)
+test('objetivo manda el blanco con su npcID y se actualiza al cambiar o morir', function()
+    local blanco = {existe=true, nombre='Kodo, viejo', nivel=34, clase='elite', reaccion=2, jugador=false, muerto=false,
+        guid='Creature-0-1-2-3-4467-0000'}
+    local nombre, nivel = UnitName, UnitLevel
+    UnitExists = function(u) igual(u, 'target'); return blanco.existe end
+    UnitName = function(u) if u == 'target' then return blanco.nombre end; return nombre(u) end
+    UnitLevel = function(u) if u == 'target' then return blanco.nivel end; return nivel(u) end
+    UnitClassification = function() return blanco.clase end
+    UnitReaction = function(a, b) igual(a, 'target'); igual(b, 'player'); return blanco.reaccion end
+    UnitIsPlayer = function() return blanco.jugador end
+    UnitIsDead = function() return blanco.muerto end
+    local guid = UnitGUID
+    UnitGUID = function(u) if u == 'target' then return blanco.guid end; return guid(u) end
+    C_CreatureInfo = {GetCreatureID=function(g) igual(g, blanco.guid); return 4467 end}
+    local ok, err = pcall(function()
+        iniciar(); igual(ObjetivoPayload(), 'Kodo\\c viejo,34,elite,2,4467,0,0#')
+        blanco.muerto = true; FAKE.Event('UNIT_FLAGS', 'target'); FAKE.Advance(2)
+        igual(ObjetivoPayload(), 'Kodo\\c viejo,34,elite,2,4467,0,1#')
+        blanco.nombre, blanco.nivel, blanco.clase, blanco.jugador, blanco.muerto, blanco.guid = 'Thrall', -1, 'normal', true, false, FAKE.secret
+        FAKE.Event('PLAYER_TARGET_CHANGED'); FAKE.Advance(2)
+        igual(ObjetivoPayload(), 'Thrall,-1,normal,2,,1,0#')
+        blanco.existe = false; FAKE.Event('PLAYER_TARGET_CHANGED'); FAKE.Advance(2)
+        igual(ObjetivoPayload(), ',,,,,,#')
+    end)
+    UnitExists, UnitClassification, UnitReaction, UnitIsPlayer, UnitIsDead, C_CreatureInfo = nil, nil, nil, nil, nil, nil
+    UnitName, UnitLevel, UnitGUID = nombre, nivel, guid
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

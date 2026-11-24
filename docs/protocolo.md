@@ -138,3 +138,7 @@ Mejoras activas del jugador (`C_UnitAuras.GetAuraDataByIndex` con `HELPFUL`), ha
 ### pvp (0.15.2)
 
 `tipoZona,subzona,facción,marcado#`. `tipoZona` es lo que devuelve `C_PvP.GetZonePVPInfo` (`sanctuary`, `friendly`, `hostile`, `contested`, `combat`, `arena`…); `subzona` y `marcado` (`UnitIsPVP`) van como `1`/`0`. Sin la API: `,,,#`. Se manda con `ZONE_CHANGED*`, `PLAYER_FLAGS_CHANGED` y `UNIT_FACTION` del jugador.
+
+### reinicio (0.15.2)
+
+`diarioEpoch,semanalEpoch#`: hora del servidor del próximo reinicio diario y semanal (`C_DateAndTime.GetSecondsUntilDailyReset`/`GetSecondsUntilWeeklyReset`), redondeada al minuto. Sin la API: `,#`. Se manda al entrar y otra vez 5 s después de cada reinicio diario.

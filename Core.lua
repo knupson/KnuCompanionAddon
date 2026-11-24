@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo", "auras", "pvp"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo", "auras", "pvp", "reinicio"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -978,7 +978,23 @@ local function JcJ()
     end
     return table.concat({P.Escape(tipo), subzona, P.Escape(P.Recortar(faccion, 60)), marcado}, ','), {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras, pvp=JcJ}
+-- Próximo reinicio diario y semanal en hora del servidor, redondeado al minuto (C_DateAndTime, rama forever). Pasado el
+-- reinicio diario se vuelve a pedir solo, para que la app no se quede con una hora vencida.
+local reinicioAgendado
+local function Reinicio()
+    if not (C_DateAndTime and C_DateAndTime.GetSecondsUntilDailyReset) then return ',', {} end
+    local servidor = Numero(GetServerTime())
+    local diario = Numero(C_DateAndTime.GetSecondsUntilDailyReset())
+    local semanal = C_DateAndTime.GetSecondsUntilWeeklyReset and Numero(C_DateAndTime.GetSecondsUntilWeeklyReset())
+    local function Epoch(faltan) return (faltan and servidor) and math.floor((servidor + faltan) / 60 + 0.5) * 60 or '' end
+    local diarioEpoch = Epoch(diario)
+    if diario and diarioEpoch ~= '' and reinicioAgendado ~= diarioEpoch and C_Timer and C_Timer.After then
+        reinicioAgendado = diarioEpoch
+        C_Timer.After(math.min(diario, 86400) + 5, function() Pedir('event', 'reinicio') end)
+    end
+    return diarioEpoch .. ',' .. Epoch(semanal), {}
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras, pvp=JcJ, reinicio=Reinicio}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
 local falloTipo -- Último tipo que tiró error al armar su foto, para /wowc status.
 local function Enviar()

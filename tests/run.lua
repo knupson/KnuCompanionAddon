@@ -1626,5 +1626,26 @@ test('pvp manda tipo de zona, subzona, facción y marcado', function()
     if not ok then error(err, 0) end
 end)
 
+local function ReinicioPayload()
+    local fotos = FAKE.Photos('reinicio')
+    return fotos[#fotos] and fotos[#fotos].text:match('|reinicio|(.*)$')
+end
+test('reinicio sin la API manda vacío', function() iniciar(); igual(ReinicioPayload(), ',#') end)
+test('reinicio manda diario y semanal en hora del servidor y se vuelve a pedir al pasar el diario', function()
+    local diario, semanal = 3600, 200000
+    C_DateAndTime = {GetSecondsUntilDailyReset=function() return diario end, GetSecondsUntilWeeklyReset=function() return semanal end}
+    local ok, err = pcall(function()
+        iniciar()
+        local d = math.floor((1795366800 + 3600) / 60 + 0.5) * 60
+        local w = math.floor((1795366800 + 200000) / 60 + 0.5) * 60
+        igual(ReinicioPayload(), d .. ',' .. w .. '#')
+        diario = 86400
+        FAKE.Advance(3610); igual(#FAKE.Photos('reinicio'), 2)
+        igual(ReinicioPayload(), math.floor((1795366800 + 86400) / 60 + 0.5) * 60 .. ',' .. w .. '#')
+    end)
+    C_DateAndTime = nil
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

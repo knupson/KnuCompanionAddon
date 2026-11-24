@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -740,7 +740,32 @@ local function Hogar()
     end
     return table.concat({P.Escape(P.Recortar(posada, 120)), lista, tiene}, ','), {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar}
+-- Habilidades (profesiones, armas, idiomas) como las lista la ventana del juego: C_SkillInfo y el filtro de
+-- Camelot/SkillsFrame.lua de la rama forever (sólo líneas principales, sin la categoría 7, habilidades de clase).
+-- Las de una categoría plegada no se listan; el encabezado dice cuántas categorías están plegadas, como en «log».
+local MAX_HABILIDADES = 80
+local function Habilidades()
+    if not (C_SkillInfo and C_SkillInfo.GetNumSkillLines and C_SkillInfo.GetSkillLineInfo) then return '0', {} end
+    local total = Numero(C_SkillInfo.GetNumSkillLines()) or 0
+    local registros, plegadas, categoria = {}, 0, ''
+    for i = 1, total do
+        local info = Limpiar(C_SkillInfo.GetSkillLineInfo(i))
+        if type(info) == 'table' then
+            local cabecera = Limpiar(info.isHeader) == true
+            local categoriaID = Numero(info.skillLineCategoryID)
+            if cabecera then
+                categoria = Texto(info.name) or ''
+                if Limpiar(info.isCollapsed) == true then plegadas = plegadas + 1 end
+            elseif Numero(info.parentSkillLineID) == 0 and categoriaID ~= 7 and #registros < MAX_HABILIDADES then
+                registros[#registros + 1] = table.concat({Numero(info.skillID) or '', categoriaID or '',
+                    P.Escape(P.Recortar(categoria, 60)), P.Escape(P.Recortar(Texto(info.name) or '', 80)),
+                    Numero(info.rank) or '', Numero(info.maxRank) or '', Numero(info.modifier) or ''}, ',')
+            end
+        end
+    end
+    return tostring(plegadas), registros
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -992,6 +1017,7 @@ if type(FarstriderLib_API) == 'table' and type(FarstriderLib_API.RegisterRebuild
     pcall(FarstriderLib_API.RegisterRebuildCallback, function() Pedir('event', 'ruta') end)
 end
 events:On('USER_WAYPOINT_UPDATED', function() Pedir('event', 'ruta') end)
+events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
 for _, evento in ipairs({'HEARTHSTONE_BOUND', 'BAG_UPDATE_COOLDOWN'}) do
     events:On(evento, function() Pedir('event', 'hogar') end)
 end

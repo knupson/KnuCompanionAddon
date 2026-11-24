@@ -1308,5 +1308,32 @@ test('hogar con valores secretos o sin piedra', function()
     end)
 end)
 
+local function SkillPayload()
+    local fotos = FAKE.Photos('skill')
+    return fotos[#fotos] and fotos[#fotos].text:match('|skill|(.*)$')
+end
+test('skill sin la API manda cero', function() iniciar(); igual(SkillPayload(), '0#') end)
+test('skill manda las habilidades por categoría, sin las de clase ni las secundarias, y cuenta las plegadas', function()
+    local lineas = {
+        {isHeader=true, name='Profesiones', skillID=11, isCollapsed=false},
+        {isHeader=false, name='Herrería', skillID=164, skillLineCategoryID=11, parentSkillLineID=0, rank=75, maxRank=150, modifier=0},
+        {isHeader=false, name='Sub', skillID=999, skillLineCategoryID=11, parentSkillLineID=164, rank=1, maxRank=1, modifier=0},
+        {isHeader=true, name='Clase', skillID=7, isCollapsed=false},
+        {isHeader=false, name='Protección', skillID=594, skillLineCategoryID=7, parentSkillLineID=0, rank=1, maxRank=1, modifier=0},
+        {isHeader=true, name='Armas, cuerpo a cuerpo', skillID=6, isCollapsed=false},
+        {isHeader=false, name='Espadas', skillID=43, skillLineCategoryID=6, parentSkillLineID=0, rank=FAKE.secret, maxRank=300, modifier=5},
+        {isHeader=true, name='Idiomas', skillID=10, isCollapsed=true},
+    }
+    C_SkillInfo = {GetNumSkillLines=function() return #lineas end, GetSkillLineInfo=function(i) return lineas[i] end}
+    local ok, err = pcall(function()
+        iniciar()
+        igual(SkillPayload(), '1#164,11,Profesiones,Herrería,75,150,0;43,6,Armas\\c cuerpo a cuerpo,Espadas,,300,5')
+        lineas[2].rank = 76; FAKE.Event('SKILL_LINES_CHANGED'); FAKE.Advance(2)
+        assert(SkillPayload():find('Herrería,76,150', 1, true))
+    end)
+    C_SkillInfo = nil
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

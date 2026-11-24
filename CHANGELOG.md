@@ -2,6 +2,7 @@
 
 ## 0.15.2
 
+- La app recibe tus profesiones, armas e idiomas con su nivel.
 - La app sabe dónde está atada tu piedra de hogar y cuándo vuelve a estar lista.
 - `/wowc status` muestra de dónde salió la última ruta y cuánto tardó en calcularse.
 - La app recibe el camino hasta tu destino (flecha de TomTom o punto marcado en el mapa) para dibujarlo con el próximo paso. Lo calcula FarstriderLib; sin FarstriderLib, usa el viaje de ShortestPathForever.

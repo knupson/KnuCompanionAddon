@@ -13,6 +13,7 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 - Your quest log, with objectives.
 - The dungeon or raid you are in, the route of the flight you are on and the durability of your gear.
 - Where your Hearthstone is bound and when it is ready again.
+- Your professions, weapon skills and languages, with their level.
 - The TomTom arrow target, if you have TomTom installed.
 - The path to your destination, if you have FarstriderLib or ShortestPathForever installed.
 - New mail alert, with the senders.

@@ -1803,5 +1803,46 @@ test('diag lista el último envío de cada tipo, los apagados y los que no salie
     assert(linea:find('chat -', 1, true), linea)
 end)
 
+test('Recortar no corta un carácter UTF-8 a la mitad', function(P)
+    igual(P.Recortar('a\195\169b', 2), 'a')          -- é = C3 A9: cortar en 2 dejaría medio carácter
+    igual(P.Recortar('a\195\169b', 3), 'a\195\169')
+    igual(P.Recortar('\226\130\172x', 2), '')        -- € = E2 82 AC
+    igual(P.Recortar('a\192\128', 2), 'a')           -- 0xC0 inicia un carácter: no es continuación
+    igual(P.Recortar('\128\128\128', 2), '')        -- sólo continuaciones: retrocede hasta el primer byte y no lo pasa
+    igual(P.Recortar('abc', 3), 'abc')
+end)
+test('Partes: tipo de hasta 16 letras minúsculas', function(P)
+    assert(pcall(P.Partes, 'sid', 1, string.rep('a', 16), '', {}))
+    assert(not pcall(P.Partes, 'sid', 1, string.rep('a', 17), '', {}))
+    assert(not pcall(P.Partes, 'sid', 1, 'Bags', '', {}))
+    assert(not pcall(P.Partes, 'sid', 1, 5, '', {}))
+end)
+-- Presupuesto de datos por línea: 3900 menos el prefijo con el peor caso de parte y total (64|64).
+local function Presupuesto(sid, seq, tipo) return 3900 - #('KC1|' .. sid .. '|' .. seq .. '|64|64|' .. tipo .. '|') end
+test('Partes: encabezado y registro en el límite exacto del presupuesto', function(P)
+    local b = Presupuesto('sid', 1, 'bags')
+    assert(pcall(P.Partes, 'sid', 1, 'bags', string.rep('h', b - 1), {}))    -- más el '#' = b
+    assert(not pcall(P.Partes, 'sid', 1, 'bags', string.rep('h', b), {}))
+    assert(pcall(P.Partes, 'sid', 1, 'bags', '', {string.rep('r', b)}))
+    assert(not pcall(P.Partes, 'sid', 1, 'bags', '', {string.rep('r', b + 1)}))
+end)
+test('Partes: lo que entra justo queda en la misma parte', function(P)
+    local b = Presupuesto('sid', 1, 'bags')
+    -- '#' + registro1 + ';' + registro2 = b exacto: una sola parte.
+    local r1 = string.rep('a', 100)
+    local r2 = string.rep('b', b - 1 - 100 - 1)
+    igual(#P.Partes('sid', 1, 'bags', '', {r1, r2}), 1)
+    igual(#P.Partes('sid', 1, 'bags', '', {r1, r2 .. 'c'}), 2)
+end)
+test('Partes: hasta 64 partes', function(P)
+    local b = Presupuesto('sid', 1, 'bags')
+    local grande = string.rep('z', b - 1)   -- cada registro llena una parte
+    local registros = {}
+    for i = 1, 64 do registros[i] = grande end
+    igual(#P.Partes('sid', 1, 'bags', '', registros), 64)   -- '#' + el primero llenan la parte 1; cada otro (con ';') llena la suya
+    registros[65] = grande
+    assert(not pcall(P.Partes, 'sid', 1, 'bags', '', registros))
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

@@ -56,6 +56,8 @@ copiar()
 original = open(os.path.join(BASE, 'Core.lua'), encoding='utf-8').read()
 codigo, ultima = correr()
 print('base:', ultima)
+if codigo != 0:
+    sys.exit('Las pruebas fallan sin mutar: arreglalas antes de correr las mutaciones.')
 vivas = []
 for desc, viejo, nuevo in MUTACIONES:
     if original.count(viejo) != 1:

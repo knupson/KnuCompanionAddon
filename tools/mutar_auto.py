@@ -1,13 +1,15 @@
 """Mutaciones automáticas de operadores sobre Core.lua: cambia un operador por vez, corre luajit tests/run.lua en una
 copia y anota las mutaciones que ninguna prueba detecta («vivas»). Sirve para encontrar huecos en las pruebas.
 
-Uso: python tools/mutar_auto.py [--desde N] [--hasta N]   (desde la raíz del repo)
+Uso: python tools/mutar_auto.py [--archivo Proto.lua] [--desde N] [--hasta N]   (desde la raíz del repo)
 Escribe el avance en <TEMP>/wowc-mutar-auto/latido.txt y el resultado en <TEMP>/wowc-mutar-auto/vivas.txt.
 """
 import os, re, shutil, subprocess, sys, time
 
 REPO = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-BASE = os.path.join(os.environ.get('TEMP') or os.environ.get('TMPDIR') or '/tmp', 'wowc-mutar-auto')
+ARCHIVO = sys.argv[sys.argv.index('--archivo') + 1] if '--archivo' in sys.argv else 'Core.lua'
+SUFIJO = '' if ARCHIVO == 'Core.lua' else '-' + os.path.splitext(os.path.basename(ARCHIVO))[0].lower()
+BASE = os.path.join(os.environ.get('TEMP') or os.environ.get('TMPDIR') or '/tmp', 'wowc-mutar-auto' + SUFIJO)
 COPIA = os.path.join(BASE, 'copia')
 
 # Reemplazos de a uno; cada ocurrencia en una línea es una mutación distinta.
@@ -44,9 +46,12 @@ def main():
     if os.path.isdir(COPIA):
         shutil.rmtree(COPIA)
     shutil.copytree(REPO, COPIA, ignore=shutil.ignore_patterns('.git', 'media', 'tools', 'docs'))
-    ruta = os.path.join(COPIA, 'Core.lua')
+    ruta = os.path.join(COPIA, ARCHIVO)
     original = open(ruta, encoding='utf-8').read()
     lineas = original.split('\n')
+    # Con pruebas en rojo de entrada, toda mutación «fallaría» y parecería detectada: no se sigue.
+    if correr() != 0:
+        sys.exit('Las pruebas fallan sin mutar: arreglalas antes de correr las mutaciones.')
     lista = list(mutaciones(lineas))[desde:hasta]
     vivas, inicio = [], time.time()
     latido = os.path.join(BASE, 'latido.txt')
@@ -55,7 +60,7 @@ def main():
         copia[n] = mutada
         open(ruta, 'w', encoding='utf-8', newline='').write('\n'.join(copia))
         if correr() == 0:
-            vivas.append(f'Core.lua:{n + 1} | {desc} | {lineas[n].strip()[:140]}')
+            vivas.append(f'{ARCHIVO}:{n + 1} | {desc} | {lineas[n].strip()[:140]}')
         with open(latido, 'w', encoding='utf-8') as f:
             f.write(f'{i + 1}/{len(lista)} vivas={len(vivas)} segundos={int(time.time() - inicio)} {time.strftime("%H:%M:%S")}\n')
     open(ruta, 'w', encoding='utf-8', newline='').write(original)

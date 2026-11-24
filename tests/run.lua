@@ -1647,5 +1647,28 @@ test('reinicio manda diario y semanal en hora del servidor y se vuelve a pedir a
     if not ok then error(err, 0) end
 end)
 
+test('rep en el peor caso (100 nombres de 80 comas) se parte sin pasar el límite', function()
+    local facciones = {{isHeader=true, name=string.rep(',', 80), factionID=1, isCollapsed=false}}
+    for i = 1, 120 do
+        facciones[#facciones + 1] = {isHeader=false, name=string.rep(',', 80), factionID=1000 + i, reaction=8,
+            currentStanding=42000, currentReactionThreshold=42000, nextReactionThreshold=42999, atWarWith=true, isWatched=true}
+    end
+    C_Reputation = {GetNumFactions=function() return #facciones end, GetFactionDataByIndex=function(i) return facciones[i] end}
+    local ok, err = pcall(function()
+        iniciar()
+        local fotos = FAKE.Photos('rep')
+        assert(#fotos >= 2, 'se esperaba más de una parte')
+        local datos = {}
+        for _, f in ipairs(fotos) do
+            assert(#f.text <= 3900, 'línea demasiado larga: ' .. #f.text)
+            datos[#datos + 1] = f.text:match('|rep|(.*)$')
+        end
+        local _, registros = table.concat(datos):gsub(';', ';')
+        igual(registros + 1, 100)
+    end)
+    C_Reputation = nil
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

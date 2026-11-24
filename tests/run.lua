@@ -1931,5 +1931,69 @@ test('look: aplicar sin datos con raza o sexo secretos no tira error ni borra na
     assert(WOWCompanionDB.look[guardado])
 end)
 
+-- Bordes y casos que dejaron vivos las mutaciones automáticas de Core.lua (tools/mutar_auto.py).
+local function NodoTaxi(id, slot, nombre, x, y)
+    return {nodeID=id, slotIndex=slot, name=nombre, state=1, position={GetXY=function() return x, y end}}
+end
+test('pos acepta coordenadas exactamente 0 y 1', function()
+    FAKE.map, FAKE.x, FAKE.y, FAKE.facing = 37, 0, 1, 0
+    iniciar(); assert(PosPayload():match('^37,0%.0000,1%.0000,'), PosPayload())
+    FAKE.x, FAKE.y = 1, 0; FAKE.ns.Pedir('send', 'pos'); FAKE.Advance(2)
+    assert(PosPayload():match('^37,1%.0000,0%.0000,'), PosPayload())
+end)
+test('dest acepta la flecha en el borde del mapa (0 y 1)', function()
+    ConTomTom(function(flecha)
+        iniciar(); flecha({1454, 0, 1, title='Borde'}); FAKE.Advance(2)
+        assert(DestPayload():match('^1454,0%.0000,1%.0000,Borde,'), DestPayload())
+    end)
+end)
+test('taxi acepta un nodo en el borde del mapa', function()
+    ConVuelos({NodoTaxi(80, 3, 'Origen', 0, 0.5), NodoTaxi(23, 7, 'Destino', 1, 0.3)}, {[7]={3, 7}}, function(Volar)
+        iniciar(); Volar(7); FAKE.Advance(1)
+        igual(TaxiPayload(), '1414,Destino#80:0.0000:0.5000;23:1.0000:0.3000')
+    end)
+end)
+test('quest acepta una misión en el borde del mapa', function()
+    Ubicar()
+    ConMisiones({{questID=9, x=0, y=1}}, {}, {}, nil, function()
+        iniciar(); assert(QuestPayload():find('9,0.0000,1.0000,', 1, true), QuestPayload())
+    end)
+end)
+test('alts se actualiza cuando cambia sólo el nivel o sólo la clase', function()
+    iniciar(); local clave = FAKE.name .. '-' .. FAKE.realm
+    FAKE.level = FAKE.level + 1; FAKE.Event('PLAYER_LEVEL_UP'); FAKE.Advance(2)
+    igual(WOWCompanionDB.alts[clave].nivel, FAKE.level)
+    FAKE.class = 'MAGE'; FAKE.Event('PLAYER_LEVEL_UP'); FAKE.Advance(2)
+    igual(WOWCompanionDB.alts[clave].clase, 'MAGE')
+end)
+test('monedas cuenta sólo los grupos plegados', function()
+    local lista = {
+        {isHeader=true, name='A', isHeaderExpanded=true}, {isHeader=false, name='x', currencyID=1, quantity=1, maxQuantity=0, iconFileID=1},
+        {isHeader=true, name='B', isHeaderExpanded=true}, {isHeader=false, name='y', currencyID=2, quantity=1, maxQuantity=0, iconFileID=1},
+        {isHeader=true, name='C', isHeaderExpanded=false},
+    }
+    C_CurrencyInfo = {GetCurrencyListSize=function() return #lista end, GetCurrencyListInfo=function(i) return lista[i] end}
+    local ok, err = pcall(function() iniciar(); assert(MonedasPayload():match('^1#'), MonedasPayload()) end)
+    C_CurrencyInfo = nil
+    if not ok then error(err, 0) end
+end)
+test('taxi: UNIT_FLAGS del jugador al aterrizar borra la ruta; el de otra unidad no', function()
+    ConVuelos({NodoTaxi(80, 3, 'Origen', 0.6, 0.5), NodoTaxi(23, 7, 'Destino', 0.55, 0.3)}, {[7]={3, 7}}, function(Volar)
+        iniciar(); Volar(7); FAKE.Advance(1)
+        FAKE.taxi = true; FAKE.Event('UNIT_FLAGS', 'player'); FAKE.Advance(2)
+        FAKE.taxi = false; FAKE.Event('UNIT_FLAGS', 'target'); FAKE.Advance(2)
+        assert(TaxiPayload() ~= ',#', 'otra unidad no tendría que cerrar el vuelo')
+        FAKE.Event('UNIT_FLAGS', 'player'); FAKE.Advance(2); igual(TaxiPayload(), ',#')
+    end)
+end)
+test('chat solo en la tanda confirma sus mensajes y no los repite en el envío siguiente', function()
+    iniciar(); FAKE.Advance(5)
+    Msg('CHAT_MSG_GUILD', 'uno', 'Ana', 1); FAKE.Advance(2)
+    Msg('CHAT_MSG_GUILD', 'dos', 'Ana', 2); FAKE.Advance(2)
+    local fotos = ChatFotos()
+    local ultima = fotos[#fotos].text
+    assert(ultima:find('dos', 1, true) and not ultima:find('uno', 1, true), ultima)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

@@ -1460,5 +1460,27 @@ test('cada tipo tiene su foto, sin repetidos ni fotos sueltas', function()
     for tipo in pairs(FAKE.ns.fotos) do assert(vistos[tipo], 'foto sin tipo: ' .. tipo) end
 end)
 
+local function MonedasPayload()
+    local fotos = FAKE.Photos('monedas')
+    return fotos[#fotos] and fotos[#fotos].text:match('|monedas|(.*)$')
+end
+test('monedas sin la API manda cero', function() iniciar(); igual(MonedasPayload(), '0#') end)
+test('monedas manda cada moneda con su grupo, cantidad, máximo e ícono', function()
+    local lista = {
+        {isHeader=true, name='JcJ', isHeaderExpanded=true},
+        {isHeader=false, name='Honor', currencyID=1901, quantity=1200, maxQuantity=75000, iconFileID=1455894},
+        {isHeader=false, name='Marca, vieja', currencyID=FAKE.secret, quantity=FAKE.secret, maxQuantity=0, iconFileID=1},
+        {isHeader=true, name='Viejas', isHeaderExpanded=false},
+    }
+    C_CurrencyInfo = {GetCurrencyListSize=function() return #lista end, GetCurrencyListInfo=function(i) return lista[i] end}
+    local ok, err = pcall(function()
+        iniciar(); igual(MonedasPayload(), '1#1901,JcJ,Honor,1200,75000,1455894;,JcJ,Marca\\c vieja,,0,1')
+        lista[2].quantity = 1300; FAKE.Event('CURRENCY_DISPLAY_UPDATE'); FAKE.Advance(2)
+        assert(MonedasPayload():find('Honor,1300,', 1, true))
+    end)
+    C_CurrencyInfo = nil
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

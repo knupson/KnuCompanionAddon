@@ -14,7 +14,7 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 - The dungeon or raid you are in, the route of the flight you are on and the durability of your gear.
 - Where your Hearthstone is bound and when it is ready again.
 - Your professions, weapon skills and languages, with their level.
-- Your reputations.
+- Your reputations and currencies.
 - Your party or raid: class, level, online and dead.
 - Your characters on this account, with class, level and gold. Each one shows up after it logs in once.
 - The TomTom arrow target, if you have TomTom installed.

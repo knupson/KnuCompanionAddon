@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -862,7 +862,30 @@ local function Alts()
     end
     return tostring(#claves), registros
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts}
+-- Monedas (honor, fichas...) como las lista la ventana del juego (Blizzard_TokenUI/Camelot, rama forever):
+-- C_CurrencyInfo.GetCurrencyListSize y GetCurrencyListInfo. Las de un grupo plegado no se listan; el encabezado dice cuántos
+-- grupos están plegados.
+local MAX_MONEDAS = 80
+local function Monedas()
+    if not (C_CurrencyInfo and C_CurrencyInfo.GetCurrencyListSize and C_CurrencyInfo.GetCurrencyListInfo) then return '0', {} end
+    local total = Numero(C_CurrencyInfo.GetCurrencyListSize()) or 0
+    local registros, plegados, grupo = {}, 0, ''
+    for i = 1, total do
+        local info = Limpiar(C_CurrencyInfo.GetCurrencyListInfo(i))
+        if type(info) == 'table' then
+            if Limpiar(info.isHeader) == true then
+                grupo = Texto(info.name) or ''
+                if Limpiar(info.isHeaderExpanded) == false then plegados = plegados + 1 end
+            elseif #registros < MAX_MONEDAS then
+                registros[#registros + 1] = table.concat({Numero(info.currencyID) or '', P.Escape(P.Recortar(grupo, 60)),
+                    P.Escape(P.Recortar(Texto(info.name) or '', 80)), Numero(info.quantity) or '',
+                    Numero(info.maxQuantity) or '', Numero(info.iconFileID) or ''}, ',')
+            end
+        end
+    end
+    return tostring(plegados), registros
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
 -- Tipos que el jugador apagó con /wowc tipo <nombre> off (WOWCompanionDB.apagados). hello no se apaga: la app lo usa para
 -- saber que el addon está vivo y qué versión tiene.
@@ -1140,6 +1163,7 @@ end
 events:On('USER_WAYPOINT_UPDATED', function() Pedir('event', 'ruta') end)
 events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
 events:On('UPDATE_FACTION', function() Pedir('event', 'rep') end)
+events:On('CURRENCY_DISPLAY_UPDATE', function() Pedir('event', 'monedas') end)
 events:On('GROUP_ROSTER_UPDATE', function() Pedir('event', 'grupo') end)
 for _, evento in ipairs({'UNIT_LEVEL', 'UNIT_CONNECTION'}) do
     events:On(evento, function(unidad)

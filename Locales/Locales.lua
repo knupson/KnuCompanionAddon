@@ -4,7 +4,7 @@ local es = {
     ['Usage: /wowc on | off | send | status'] = 'Uso: /wowc on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app',
     ['Bag companion: on | off | send | status'] = 'KnuCompanion: on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app',
     ['GPS enabled'] = 'GPS en vivo activado', ['GPS disabled'] = 'GPS en vivo desactivado',
-    ['Chat enabled'] = 'La app recibe hermandad, susurros, grupo y banda',
+    ['Chat enabled'] = 'La app recibe hermandad, oficiales, susurros, grupo, banda y estancia',
     ['Chat disabled'] = 'La app ya no recibe el chat',
     ['Public channels enabled'] = 'La app también recibe General, Comercio y los demás canales',
     ['Public channels disabled'] = 'La app ya no recibe General, Comercio ni los demás canales',

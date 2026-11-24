@@ -1099,7 +1099,8 @@ local function Enviar()
                         end
                         enviados[#enviados + 1] = {tipo=tipo, foto=foto, ok=ok, faltan=faltan, posicion=posicion}
                     else
-                        fallo = tostring(partes) -- El encabezado inválido no se manda.
+                        -- El encabezado inválido no se manda y el número vuelve atrás: la app no ve un hueco en seq.
+                        fallo, seq = tostring(partes), seq - 1
                     end
                 end
             end

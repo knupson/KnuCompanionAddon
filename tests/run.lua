@@ -1717,5 +1717,23 @@ test('bank con Syndicator sin datos de banco usa la copia propia', function()
     end)
 end)
 
+test('una foto que P.Partes rechaza no deja hueco en seq', function(P)
+    local original = P.Partes
+    P.Partes = function(sid, seq, tipo, ...)
+        if tipo == 'hogar' then error('Encabezado demasiado largo') end
+        return original(sid, seq, tipo, ...)
+    end
+    local ok, err = pcall(function()
+        iniciar()
+        igual(#FAKE.Photos('hogar'), 0)
+        local seqs = {}
+        for _, l in ipairs(FAKE.Photos('*')) do seqs[#seqs + 1] = tonumber(l.text:match('^KC1|%x+|(%d+)|')) end
+        table.sort(seqs)
+        for i = 2, #seqs do assert(seqs[i] - seqs[i - 1] <= 1, 'hueco entre ' .. seqs[i - 1] .. ' y ' .. seqs[i]) end
+    end)
+    P.Partes = original
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

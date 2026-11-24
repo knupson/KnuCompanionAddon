@@ -319,7 +319,10 @@ local function Personaje()
         P.Escape(P.Recortar(Texto(UnitName('player')) or '', 200)),
         P.Escape(Texto(claseArchivo) or ''), P.Escape(P.Recortar(Texto(raza) or '', 200)), decimal,
         raceID or '', sexo or '', Numero(UnitXP('player')) or '', Numero(UnitXPMax('player')) or '',
-        P.Escape(Texto(GetRealmName()) or '')}, ','), {}
+        P.Escape(Texto(GetRealmName()) or ''),
+        -- Al final, para no correr los campos que la app ya lee: XP descansada (GetXPExhaustion, nil sin descanso) y si
+        -- estás en una posada o ciudad (IsResting). Las dos están en la rama forever de wow-ui-source.
+        Numero(GetXPExhaustion and GetXPExhaustion()) or '', (IsResting and (Limpiar(IsResting()) == true and '1' or '0')) or ''}, ','), {}
 end
 local function Hello()
     local version
@@ -1130,6 +1133,9 @@ if type(TomTom) == 'table' and type(TomTom.RegisterCallback) == 'function' then
     end)
 end
 events:On('PLAYER_EQUIPMENT_CHANGED', function() Pedir('event', 'equip'); Pedir('event', 'char'); Pedir('event', 'dur') end)
+for _, evento in ipairs({'UPDATE_EXHAUSTION', 'PLAYER_UPDATE_RESTING'}) do
+    events:On(evento, function() Pedir('event', 'char') end)
+end
 events:On('UPDATE_INVENTORY_DURABILITY', function() Pedir('event', 'dur') end)
 events:On('UNIT_INVENTORY_CHANGED', function(unit)
     if Texto(unit) == 'player' then Pedir('event', 'equip') end

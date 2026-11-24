@@ -200,7 +200,7 @@ test('equipo agota tres intentos sin calidad', function()
 end)
 test('personaje escapa zona y sanitiza oro secreto', function()
     FAKE.money=FAKE.secret; FAKE.zone='Zona|con,coma'; iniciar()
-    assert(FAKE.Photos('char')[1].text:find('31,,Zona\\pcon\\ccoma,Distrito,Yaestoy Muerto,PALADIN,Humano,32.2,1,0,120,1000,Prueba#',1,true))
+    assert(FAKE.Photos('char')[1].text:find('31,,Zona\\pcon\\ccoma,Distrito,Yaestoy Muerto,PALADIN,Humano,32.2,1,0,120,1000,Prueba,,#',1,true))
     FAKE.money=42; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(1)
     igual(#FAKE.Photos('char'),2); igual(#FAKE.Photos('bags'),1)
 end)
@@ -324,15 +324,15 @@ end)
 
 test('char usa raza numérica y sexo normalizado', function()
     FAKE.raceID, FAKE.sex = 5, 3
-    iniciar(); assert(FAKE.Photos('char')[1].text:find(',32.2,5,1,120,1000,Prueba#',1,true))
+    iniciar(); assert(FAKE.Photos('char')[1].text:find(',32.2,5,1,120,1000,Prueba,,#',1,true))
 end)
 
 test('char trece campos con equipado decimal y escalares secretos', function()
     FAKE.name, FAKE.class, FAKE.race, FAKE.ilvl = FAKE.secret, FAKE.secret, FAKE.secret, FAKE.secret
     FAKE.raceID, FAKE.sex, FAKE.xp, FAKE.xpMax = FAKE.secret, FAKE.secret, FAKE.secret, FAKE.secret
-    iniciar(); assert(FAKE.Photos('char')[1].text:find('31,123456,Ventormenta,Distrito,,,,,,,,,Prueba#',1,true))
+    iniciar(); assert(FAKE.Photos('char')[1].text:find('31,123456,Ventormenta,Distrito,,,,,,,,,Prueba,,#',1,true))
     FAKE.ilvl=15.67; FAKE.xp=200; FAKE.xpMax=1000; FAKE.Event('PLAYER_XP_UPDATE'); FAKE.Advance(1)
-    assert(FAKE.Photos('char')[2].text:find(',15.7,,,200,1000,Prueba#',1,true))
+    assert(FAKE.Photos('char')[2].text:find(',15.7,,,200,1000,Prueba,,#',1,true))
 end)
 
 
@@ -726,14 +726,14 @@ end)
 test('char escapa el reino y limpia nil o secretos', function(P)
     FAKE.realm = "Reino,con|#;"
     iniciar()
-    assert(FAKE.Photos('char')[1].text:find(',' .. P.Escape(FAKE.realm) .. '#', 1, true))
+    assert(FAKE.Photos('char')[1].text:find(',' .. P.Escape(FAKE.realm) .. ',,#', 1, true))
     FAKE.realm = FAKE.secret
     FAKE.Event('PLAYER_XP_UPDATE'); FAKE.Advance(1)
-    assert(FAKE.Photos('char')[2].text:find(',120,1000,#', 1, true))
+    assert(FAKE.Photos('char')[2].text:find(',120,1000,,,#', 1, true))
     FAKE.realm = nil
     FAKE.xp = 121
     FAKE.Event('PLAYER_XP_UPDATE'); FAKE.Advance(1)
-    assert(FAKE.Photos('char')[3].text:find(',121,1000,#', 1, true))
+    assert(FAKE.Photos('char')[3].text:find(',121,1000,,,#', 1, true))
 end)
 
 test('marca opcional sin API ni registro de evento', function()
@@ -1418,6 +1418,21 @@ test('alts guarda el personaje en la cuenta y manda la lista ordenada', function
     FAKE.money = FAKE.money + 1; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(2)
     assert(AltsPayload():find(',' .. FAKE.money .. ',', 1, true))
     igual(WOWCompanionDB.alts[FAKE.name .. '-' .. FAKE.realm].oro, FAKE.money)
+end)
+
+test('char suma XP descansada y si estás descansando, y se actualiza con sus eventos', function()
+    local descanso, posada = 4500, true
+    GetXPExhaustion = function() return descanso end
+    IsResting = function() return posada end
+    local ok, err = pcall(function()
+        iniciar(); assert(FAKE.Photos('char')[1].text:find(',Prueba,4500,1#', 1, true))
+        descanso, posada = nil, false; FAKE.Event('PLAYER_UPDATE_RESTING'); FAKE.Advance(2)
+        local fotos = FAKE.Photos('char'); assert(fotos[#fotos].text:find(',Prueba,,0#', 1, true))
+        descanso = FAKE.secret; FAKE.Event('UPDATE_EXHAUSTION'); FAKE.Advance(2)
+        igual(#FAKE.Photos('char'), #fotos)
+    end)
+    GetXPExhaustion, IsResting = nil, nil
+    if not ok then error(err, 0) end
 end)
 
 print(string.format('%d pruebas, %d fallas',total,fallas))

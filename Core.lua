@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur"}
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -550,7 +550,19 @@ local function Taxi()
     if not vuelo then return ',', {} end
     return vuelo.cab, vuelo.registros
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi}
+-- Durabilidad del equipo para que la app avise cuándo reparar: slot:actual:máximo de los slots 1 a 19 que la tienen.
+-- GetInventoryItemDurability(slot) existe en la rama forever de wow-ui-source (EquipmentManager.lua, Mainline).
+local function Durabilidad()
+    if type(GetInventoryItemDurability) ~= 'function' then return '', {} end
+    local partes = {}
+    for slot = 1, 19 do
+        local ok, actual, maximo = pcall(GetInventoryItemDurability, slot)
+        actual, maximo = ok and Numero(actual), ok and Numero(maximo)
+        if actual and maximo and maximo > 0 then partes[#partes + 1] = slot .. ':' .. actual .. ':' .. maximo end
+    end
+    return table.concat(partes, ';'), {}
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -784,7 +796,8 @@ if type(TomTom) == 'table' and type(TomTom.RegisterCallback) == 'function' then
         Pedir('event', 'dest')
     end)
 end
-events:On('PLAYER_EQUIPMENT_CHANGED', function() Pedir('event', 'equip'); Pedir('event', 'char') end)
+events:On('PLAYER_EQUIPMENT_CHANGED', function() Pedir('event', 'equip'); Pedir('event', 'char'); Pedir('event', 'dur') end)
+events:On('UPDATE_INVENTORY_DURABILITY', function() Pedir('event', 'dur') end)
 events:On('UNIT_INVENTORY_CHANGED', function(unit)
     if Texto(unit) == 'player' then Pedir('event', 'equip') end
 end)

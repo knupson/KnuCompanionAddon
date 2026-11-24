@@ -105,6 +105,7 @@ end
 function GetInventoryItemID(_, slot) return FAKE.equip[slot] and FAKE.equip[slot].id end
 function GetInventoryItemQuality(_, slot) return FAKE.equip[slot] and FAKE.equip[slot].quality end
 function GetInventoryItemTexture(_, slot) return FAKE.equip[slot] and FAKE.equip[slot].icon end
+function GetInventoryItemDurability(slot) local e = FAKE.equip[slot]; if e then return e.dur, e.durMax end end
 function GetInventoryItemLink(_, slot) return FAKE.equip[slot] and FAKE.equip[slot].link end
 function GetMoney() return FAKE.money end
 function UnitLevel() return FAKE.level end

@@ -1735,5 +1735,45 @@ test('una foto que P.Partes rechaza no deja hueco en seq', function(P)
     if not ok then error(err, 0) end
 end)
 
+test('alts sale ordenado por nombre y reino aunque se haya guardado en otro orden', function()
+    WOWCompanionDB.alts = {}
+    for _, n in ipairs({'Zeta', 'Beta', 'Omega', 'Alfa', 'Mu', 'Kappa', 'Delta'}) do
+        WOWCompanionDB.alts[n .. '-R'] = {nombre=n, reino='R', clase='MAGE', nivel=1, oro=0, visto=1}
+    end
+    iniciar()
+    local nombres = {}
+    for registro in (AltsPayload():match('#(.*)$') .. ';'):gmatch('([^;]*);') do nombres[#nombres + 1] = registro:match('^([^,]*)') end
+    local ordenados = {}
+    for i, n in ipairs(nombres) do ordenados[i] = n end
+    table.sort(ordenados, function(a, b) return a < b end)
+    igual(table.concat(nombres, ' '), table.concat(ordenados, ' '))
+end)
+test('hello se manda aunque las SavedVariables lo tengan apagado', function()
+    WOWCompanionDB.apagados = {hello=true, alts=true}
+    iniciar(); igual(#FAKE.Photos('hello'), 1); igual(#FAKE.Photos('alts'), 0)
+end)
+test('ruta con FarstriderLib: un paso sin id no se empareja con una arista sin clave', function()
+    ConFSL(function(fsl)
+        local original = fsl.FindTrailTo
+        fsl.FindTrailTo = function(...)
+            local pasos, camino, aristas = original(...)
+            pasos[1].id = nil
+            aristas[1].to = {getLocation=aristas[1].to.getLocation}
+            return pasos, camino, aristas
+        end
+        C_Map.HasUserWaypoint = function() return true end
+        C_Map.GetUserWaypoint = function() return {uiMapID=1454, position={x=0.45, y=0.63}} end
+        iniciar()
+        local datos = RutaPayload()
+        assert(not datos:find('^,%d+,fsl#walk:', 1) , datos)
+    end)
+end)
+test('dur omite los slots con máximo cero', function()
+    FAKE.equip[5] = {id=1, dur=0, durMax=0}
+    FAKE.equip[6] = {id=2, dur=3, durMax=10}
+    iniciar(); igual(DurPayload(), '6:3:10#')
+    FAKE.equip[5], FAKE.equip[6] = nil, nil
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

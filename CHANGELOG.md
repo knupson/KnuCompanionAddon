@@ -5,6 +5,7 @@
 - La app sabe en qué mazmorra o banda estás, para abrir su mapa sola.
 - Al tomar un vuelo, la app recibe la ruta hasta el destino.
 - La app recibe la durabilidad del equipo, para avisarte cuándo reparar.
+- El nombre se escribe KnuCompanion, como los otros addons Knu. La carpeta sigue siendo `WOWCompanion`.
 
 ## 0.15.0
 

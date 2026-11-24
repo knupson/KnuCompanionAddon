@@ -2,7 +2,7 @@ local _, ns = ...
 local es = {
     ['Enabled'] = 'Activado', ['Disabled'] = 'Desactivado',
     ['Usage: /wowc on | off | send | status'] = 'Uso: /wowc on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app',
-    ['Bag companion: on | off | send | status'] = 'KNU Companion: on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app',
+    ['Bag companion: on | off | send | status'] = 'KnuCompanion: on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app',
     ['GPS enabled'] = 'GPS en vivo activado', ['GPS disabled'] = 'GPS en vivo desactivado',
     ['Chat enabled'] = 'La app recibe hermandad, susurros, grupo y banda',
     ['Chat disabled'] = 'La app ya no recibe el chat',
@@ -13,7 +13,7 @@ local es = {
     ['none'] = 'ninguno', ['yes'] = 'sí', ['no'] = 'no',
     ['Log write failed'] = 'Falló la escritura al log',
     ['This addon shows nothing in game: it sends your data to the desktop app. Get it at %s. Repeat this with /wowc app.'] =
-        'KNU Companion necesita la app de escritorio, sin ella no muestra nada. Bajala de %s',
+        'KnuCompanion necesita la app de escritorio, sin ella no muestra nada. Bajala de %s',
 }
 -- La UI del addon se mantiene en castellano también con el cliente en otro idioma.
 ns.L = LibStub('KnuLib-1.0'):NewLocale(es, es)

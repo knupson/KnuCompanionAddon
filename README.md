@@ -1,6 +1,6 @@
-# KNU Companion (addon)
+# KnuCompanion (addon)
 
-Addon de WoW Forever que le pasa a la app de escritorio KNU Companion tus bolsas, banco, equipo, posición, misiones y correo. Los escribe en `Logs/General.log` y la app los lee de ahí. Solo, no muestra nada en el juego.
+Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion tus bolsas, banco, equipo, posición, misiones y correo. Los escribe en `Logs/General.log` y la app los lee de ahí. Solo, no muestra nada en el juego.
 
 - App: código en `knupson/WOWCompanion` (privado); descarga en `knupson/KnuCompanion` (público, sólo releases).
 - Comandos: `/wowc on`, `off`, `send`, `status`, `gps on`, `gps off`, `app`.

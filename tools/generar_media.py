@@ -1,4 +1,4 @@
-"""Genera el logo, los íconos y el avatar de CurseForge de KNU Companion (addon WOWCompanion).
+"""Genera el logo, los íconos y el avatar de CurseForge de KnuCompanion (addon WOWCompanion).
 
 Uso desde la raíz del repo:  python tools/generar_media.py
 Salida: media/*.tga (32 bits, sin compresión, para el juego) y tools/preview/*.png.

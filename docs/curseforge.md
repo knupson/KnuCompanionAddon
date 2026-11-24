@@ -1,4 +1,4 @@
-KNU Companion needs the KNU Companion desktop app. On its own it shows nothing in game.
+KnuCompanion needs the KnuCompanion desktop app. On its own it shows nothing in game.
 
 Keep the app open on a second monitor and you see your bags, bank, gear and a map with your position, live, while you play.
 
@@ -31,7 +31,7 @@ In game messages are in Spanish for now. Made for WoW Forever. MIT license.
 
 ## En castellano
 
-Este addon necesita la app de escritorio KNU Companion. Solo, no muestra nada en el juego. La app la abrís en otro monitor y ahí ves en vivo tus bolsas, el banco, el equipo y el mapa con tu posición mientras jugás.
+Este addon necesita la app de escritorio KnuCompanion. Solo, no muestra nada en el juego. La app la abrís en otro monitor y ahí ves en vivo tus bolsas, el banco, el equipo y el mapa con tu posición mientras jugás.
 
 Descarga de la app: https://github.com/knupson/KnuCompanion/releases/latest
 

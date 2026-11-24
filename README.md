@@ -5,7 +5,7 @@ Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion lo que pasa
 - App: código en `knupson/WOWCompanion` (privado); descarga en `knupson/KnuCompanion` (público, sólo releases).
 - Comandos: `/wowc on`, `off`, `send`, `status`, `gps on`, `gps off`, `chat on`, `chat off`, `chat canales on`, `chat canales off`, `app`, `diag`, `tipos`, `tipo <nombre> on`, `tipo <nombre> off`.
 - Opcionales: Syndicator (banco sin abrirlo antes), TomTom (destino de la flecha), FarstriderLib o ShortestPathForever (camino al destino).
-- Tests: `luajit tests/run.lua` desde la raíz del repo. Para ver si las pruebas detectan errores: `python tools/mutar.py` (rompe una línea por vez en una copia y espera que cada cambio haga fallar alguna prueba). `python tools/mutar_auto.py` hace lo mismo con todos los operadores de `Core.lua` (unas 1300 mutaciones, alrededor de una hora) y deja las que sobreviven en `%TEMP%/wowc-mutar-auto/vivas.txt`.
+- Tests: `luajit tests/run.lua` desde la raíz del repo. Para ver si las pruebas detectan errores: `python tools/mutar.py` (rompe una línea por vez en una copia y espera que cada cambio haga fallar alguna prueba). `python tools/mutar_auto.py` hace lo mismo con todos los operadores de `Core.lua` (1304 mutaciones el 2026-11-24; en esta PC, 1,8 s cada una) y deja las que sobreviven en `%TEMP%/wowc-mutar-auto/vivas.txt`.
 - Íconos: `python tools/generar_media.py` (necesita Pillow). Genera `media/*.tga` y los PNG de `tools/preview/` para CurseForge.
 - Texto de la página de CurseForge: `docs/curseforge.md`.
 - Formato de cada tipo que lee la app: `docs/protocolo.md`.

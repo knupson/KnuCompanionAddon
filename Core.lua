@@ -18,7 +18,8 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar"}
+ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -715,7 +716,31 @@ local function Ruta()
     if spf then return Medir('spf', RutaSPF, spf) end
     return ',,', {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta}
+-- Piedra de hogar: posada donde está atada, cuándo vuelve a estar lista y si la tenés. HEARTHSTONE_ITEM_ID (6948),
+-- GetBindLocation y C_Container.GetItemCooldown están en la rama forever de wow-ui-source. «Lista» va en hora del servidor
+-- (GetServerTime) redondeada a 10 s, para que el dato no cambie en cada envío mientras corre el enfriamiento.
+local function Hogar()
+    local posada = Texto(GetBindLocation and GetBindLocation()) or ''
+    local item = Numero(HEARTHSTONE_ITEM_ID) or 6948
+    local tiene = ''
+    if C_Item and C_Item.GetItemCount then
+        local cantidad = Numero(C_Item.GetItemCount(item))
+        if cantidad then tiene = cantidad > 0 and '1' or '0' end
+    end
+    local lista = ''
+    local enfriamiento = C_Container and C_Container.GetItemCooldown
+    if enfriamiento then
+        local ok, inicio, duracion = pcall(enfriamiento, item)
+        inicio, duracion = ok and Real(inicio), ok and Real(duracion)
+        local ahora, servidor = Real(GetTime()), Numero(GetServerTime())
+        if inicio and duracion and ahora and servidor then
+            local falta = (inicio > 0 and duracion > 0) and math.max(0, inicio + duracion - ahora) or 0
+            lista = falta > 0 and math.floor((servidor + falta) / 10 + 0.5) * 10 or 0
+        end
+    end
+    return table.concat({P.Escape(P.Recortar(posada, 120)), lista, tiene}, ','), {}
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -967,6 +992,9 @@ if type(FarstriderLib_API) == 'table' and type(FarstriderLib_API.RegisterRebuild
     pcall(FarstriderLib_API.RegisterRebuildCallback, function() Pedir('event', 'ruta') end)
 end
 events:On('USER_WAYPOINT_UPDATED', function() Pedir('event', 'ruta') end)
+for _, evento in ipairs({'HEARTHSTONE_BOUND', 'BAG_UPDATE_COOLDOWN'}) do
+    events:On(evento, function() Pedir('event', 'hogar') end)
+end
 -- Se registra al cargar (OptionalDeps: TomTom carga antes) para no perder el destino que restaura al entrar.
 if type(TomTom) == 'table' and type(TomTom.RegisterCallback) == 'function' then
     pcall(TomTom.RegisterCallback, ns, 'ArrowTargetChanged', function(_, uid)

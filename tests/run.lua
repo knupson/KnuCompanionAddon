@@ -9,6 +9,8 @@ end
 local function igual(a,b) assert(a == b, tostring(a) .. ' ~= ' .. tostring(b)) end
 local function datos() return FAKE.Photos()[1].text:match('|bags|(.*)$') end
 local function iniciar() FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1) end
+-- Fotos por ronda completa: todos los tipos menos el chat, que no sale con el buffer vacío. Cada ronda suma 12 rellenos.
+local function F() return #FAKE.ns.tipos - 1 end
 
 test('escape en una pasada e ida y vuelta', function(P)
     local original = '\\|;,#\r\n ñ'
@@ -58,13 +60,13 @@ test('predicados de secretos y fallback', function(P)
     assert(not P.EsSecreto(1,nil,nil))
 end)
 test('foto inicial y doce líneas de relleno', function()
-    FAKE.Item(); iniciar(); igual(#FAKE.lines,27)
+    FAKE.Item(); iniciar(); igual(#FAKE.lines,F()+12)
     assert(datos():find('Cajón arrebatado',1,true))
     assert(FAKE.lines[1].text:match('^KC1|%x%x%x%x%x%x%x%x|1|1|1|bags|'))
-    for i=16,27 do igual(#FAKE.lines[i].text,4089); igual(FAKE.lines[i].text:sub(1,3),'KCP') end
+    for i=F()+1,F()+12 do igual(#FAKE.lines[i].text,4089); igual(FAKE.lines[i].text:sub(1,3),'KCP') end
 end)
 test('sin cambios no hay datos ni relleno', function()
-    FAKE.Item(); iniciar(); FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.lines,27)
+    FAKE.Item(); iniciar(); FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.lines,F()+12)
 end)
 test('ráfaga agrupa eventos en un timer', function()
     for _=1,100 do FAKE.Event('BAG_UPDATE_DELAYED') end
@@ -85,19 +87,19 @@ end)
 test('fallo reintenta dos veces y status informa', function()
     FAKE.fail=true; iniciar(); SlashCmdList.WOWC('status')
     assert(FAKE.chat[#FAKE.chat]:find('Falló',1,true))
-    FAKE.Advance(1.99); igual(FAKE.calls,27)
-    FAKE.Advance(20); igual(FAKE.calls,81); igual(#FAKE.timers,0); igual(FAKE.maxTimers,1)
+    FAKE.Advance(1.99); igual(FAKE.calls,F()+12)
+    FAKE.Advance(20); igual(FAKE.calls,3*(F()+12)); igual(#FAKE.timers,0); igual(FAKE.maxTimers,1)
 end)
 test('foto fallida no queda marcada como enviada', function()
     FAKE.fail=true; iniciar(); FAKE.fail=false; FAKE.Advance(2)
-    igual(#FAKE.Photos(),1); assert(FAKE.Photos()[1].text:find('|16|1|1|bags|',1,true))
+    igual(#FAKE.Photos(),1); assert(FAKE.Photos()[1].text:find('|'..(F()+1)..'|1|1|bags|',1,true))
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos(),1)
 end)
 test('fallo en una parte conserva el reintento', function()
     FAKE.failAt=1; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),1)
 end)
 test('fallo de relleno tampoco confirma la foto', function()
-    FAKE.failAt=16; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),2)
+    FAKE.failAt=F()+1; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),2)
 end)
 test('Hello funciona sin C_AddOns o si no devuelve nada', function()
     local old = C_AddOns
@@ -110,7 +112,7 @@ test('Hello funciona sin C_AddOns o si no devuelve nada', function()
     assert(FAKE.lines[6].text:match('|hello|0%.0%.0,16'))
 end)
 test('off durante reintento impide el envío', function()
-    FAKE.fail=true; iniciar(); SlashCmdList.WOWC('off'); FAKE.Advance(10); igual(FAKE.calls,27)
+    FAKE.fail=true; iniciar(); SlashCmdList.WOWC('off'); FAKE.Advance(10); igual(FAKE.calls,F()+12)
 end)
 test('nombre por hipervínculo real', function()
     FAKE.Item(); iniciar(); assert(datos():find('Cajón arrebatado: Curiosidades de oficial',1,true))
@@ -150,10 +152,10 @@ test('encabezado genérico grande queda entero y el excesivo falla', function(P)
     assert(not pcall(P.Partes,'0123abcd',1,'bank',string.rep('a',3900),{}))
 end)
 test('todos los tipos comparten doce rellenos y sin cambios no mandan', function()
-    iniciar(); igual(#FAKE.Photos('*'),15); igual(#FAKE.lines,27)
+    iniciar(); igual(#FAKE.Photos('*'),F()); igual(#FAKE.lines,F()+12)
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Event('PLAYER_EQUIPMENT_CHANGED')
-    FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Advance(1); igual(#FAKE.lines,27)
-    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('*'),30); igual(#FAKE.lines,54)
+    FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Advance(1); igual(#FAKE.lines,F()+12)
+    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('*'),2*F()); igual(#FAKE.lines,2*(F()+12))
 end)
 test('sin Syndicator manda nosyn una vez', function()
     iniciar(); igual(FAKE.Photos('bank')[1].text:match('|bank|(.*)'), 'nosyn#')
@@ -313,8 +315,8 @@ end)
 test('fallo de parte tip y fallo de relleno no confirman el envío', function()
     FAKE.Item({itemID=1,hyperlink=Link(1)})
     ActivarTips(function() return UnTip() end)
-    FAKE.failAt=16; iniciar(); igual(#FAKE.Photos('tip'),0)
-    FAKE.failAt=33; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
+    FAKE.failAt=F()+1; iniciar(); igual(#FAKE.Photos('tip'),0)
+    FAKE.failAt=2*(F()+1)+1; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
     FAKE.failAt=nil; FAKE.Advance(2); igual(#FAKE.Photos('tip'),2)
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),2)
     SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),3)
@@ -1271,6 +1273,38 @@ test('ruta con FarstriderLib sin camino cae en ShortestPathForever', function()
             igual(fsl.pedidos[1][1], 1411)
             assert(RutaPayload():find(',312,spf#walk:', 1, true))
         end)
+    end)
+end)
+
+local function HogarPayload()
+    local fotos = FAKE.Photos('hogar')
+    return fotos[#fotos] and fotos[#fotos].text:match('|hogar|(.*)$')
+end
+local function ConHogar(posada, cantidad, enfriamiento, fn)
+    local cuenta, cd = C_Item.GetItemCount, C_Container.GetItemCooldown
+    GetBindLocation = function() return posada end
+    C_Item.GetItemCount = function(id) igual(id, 6948); return cantidad end
+    C_Container.GetItemCooldown = function(id) igual(id, 6948); return enfriamiento() end
+    local ok, err = pcall(fn)
+    GetBindLocation, C_Item.GetItemCount, C_Container.GetItemCooldown = nil, cuenta, cd
+    if not ok then error(err, 0) end
+end
+test('hogar sin las APIs manda vacío', function() iniciar(); igual(HogarPayload(), ',,#') end)
+test('hogar manda posada, hora de servidor en que está lista y si tenés la piedra', function()
+    local inicio, duracion = 0, 0
+    ConHogar('Orgrimmar, Valle', 1, function() return inicio, duracion, 1 end, function()
+        iniciar(); igual(HogarPayload(), 'Orgrimmar\\c Valle,0,1#')
+        inicio, duracion = FAKE.now, 1800
+        FAKE.Event('BAG_UPDATE_COOLDOWN'); FAKE.Advance(2)
+        local lista = math.floor((1795366800 + 1800 - 2) / 10 + 0.5) * 10
+        igual(HogarPayload(), 'Orgrimmar\\c Valle,' .. lista .. ',1#')
+        local antes = #FAKE.Photos('hogar')
+        FAKE.Event('BAG_UPDATE_COOLDOWN'); FAKE.Advance(2); igual(#FAKE.Photos('hogar'), antes)
+    end)
+end)
+test('hogar con valores secretos o sin piedra', function()
+    ConHogar(FAKE.secret, 0, function() return FAKE.secret, 1800, 1 end, function()
+        iniciar(); igual(HogarPayload(), ',,0#')
     end)
 end)
 

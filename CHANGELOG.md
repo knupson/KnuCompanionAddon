@@ -8,6 +8,7 @@
 - Cuando morís, la app sabe dónde quedó tu cuerpo y si ya sos fantasma.
 - `/wowc tipo <nombre> off` deja de mandar ese dato, por ejemplo `alts` o `grupo`. `/wowc tipos` muestra cuáles están apagados.
 - `/wowc status` muestra de dónde salió la última ruta y cuánto tardó en calcularse.
+- `/wowc diag` muestra cuándo se mandó cada dato por última vez y cuánto pesaba.
 - Si un dato falla al armarse, los demás se siguen mandando y `/wowc status` dice cuál falló.
 - Una vez por cuenta, un mensaje en el chat dice dónde dejar un comentario o reportar un error. También aparece al pie de la ayuda de `/wowc`.
 

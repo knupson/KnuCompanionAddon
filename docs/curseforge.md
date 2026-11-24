@@ -25,6 +25,7 @@ If you already have the app, you do not need this page: the app ships the addon 
 - `/wowc gps off`, `/wowc gps on`: stop or resume the live position.
 - `/wowc send`: send everything again.
 - `/wowc status`: check that it is sending.
+- `/wowc diag`: when each kind of data was last sent, and its size.
 - `/wowc chat off`, `/wowc chat on`: stop or resume sending chat.
 - `/wowc chat canales on`, `/wowc chat canales off`: add or remove General, Trade and the other public channels.
 - `/wowc app`: show where to get the app again.

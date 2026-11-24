@@ -1062,6 +1062,7 @@ end
 local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras, pvp=JcJ, reinicio=Reinicio}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
 local falloTipo -- Último tipo que tiró error al armar su foto, para /wowc status.
+local enviadoTipo = {} -- Último envío confirmado de cada tipo (hora y tamaño), para /wowc diag.
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -1153,6 +1154,7 @@ local function Enviar()
             local tipo = envio.tipo
             if envio.ok and rellenoOk then
                 ultima[tipo], ultimoEnvio = envio.foto, GetTime()
+                enviadoTipo[tipo] = {t=ultimoEnvio, bytes=#envio.foto}
                 if tipo == 'chat' then ConfirmarChat() end
                 if envio.posicion then
                     ultimaPos = envio.posicion
@@ -1285,6 +1287,15 @@ local function Comando(msg)
                 L[rutaInfo.ok and 'yes' or 'no'], rutaInfo.ms, rutaInfo.registros))
         end
     elseif msg == 'app' then AvisoApp()
+    elseif msg == 'diag' then
+        local ahora, partes = GetTime(), {}
+        for _, tipo in ipairs(tipos) do
+            local e = enviadoTipo[tipo]
+            if Apagado(tipo) then partes[#partes + 1] = tipo .. ' (' .. L['off'] .. ')'
+            elseif e then partes[#partes + 1] = string.format('%s %ds %dB', tipo, math.floor(ahora - e.t), e.bytes)
+            else partes[#partes + 1] = tipo .. ' -' end
+        end
+        Print(string.format(L['Last send per type: %s'], table.concat(partes, ', ')))
     elseif msg == 'tipos' then
         local lista = {}
         for _, tipo in ipairs(tipos) do lista[#lista + 1] = Apagado(tipo) and ('(' .. tipo .. ')') or tipo end

@@ -1,8 +1,8 @@
 local _, ns = ...
 local es = {
     ['Enabled'] = 'Activado', ['Disabled'] = 'Desactivado',
-    ['Usage: /wowc on | off | send | status'] = 'Uso: /wowc on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app | tipos | tipo <nombre> on | tipo <nombre> off',
-    ['Bag companion: on | off | send | status'] = 'KnuCompanion: on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app | tipos | tipo <nombre> on | tipo <nombre> off',
+    ['Usage: /wowc on | off | send | status'] = 'Uso: /wowc on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app | diag | tipos | tipo <nombre> on | tipo <nombre> off',
+    ['Bag companion: on | off | send | status'] = 'KnuCompanion: on | off | send | status | gps off | gps on | chat off | chat on | chat canales on | chat canales off | app | diag | tipos | tipo <nombre> on | tipo <nombre> off',
     ['GPS enabled'] = 'GPS en vivo activado', ['GPS disabled'] = 'GPS en vivo desactivado',
     ['Chat enabled'] = 'La app recibe hermandad, oficiales, susurros, grupo, banda y estancia',
     ['Chat disabled'] = 'La app ya no recibe el chat',
@@ -15,6 +15,8 @@ local es = {
     ['Unknown type: %s. List them with /wowc tipos'] = 'No existe el tipo %s. Los ves con /wowc tipos',
     ['Type %s off'] = 'La app ya no recibe %s', ['Type %s on'] = 'La app vuelve a recibir %s',
     ['Last type error: %s'] = 'Último tipo con error: %s',
+    ['Last send per type: %s'] = 'Último envío por tipo (hace cuánto y tamaño): %s',
+    ['off'] = 'apagado',
     ['none'] = 'ninguno', ['yes'] = 'sí', ['no'] = 'no',
     ['Log write failed'] = 'Falló la escritura al log',
     ['This addon shows nothing in game: it sends your data to the desktop app. Get it at %s. Repeat this with /wowc app.'] =

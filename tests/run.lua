@@ -1792,5 +1792,16 @@ test('grupo con un solo integrante (el jugador) cuenta como solo', function()
     end)
 end)
 
+test('diag lista el último envío de cada tipo, los apagados y los que no salieron', function()
+    WOWCompanionDB.apagados = {alts=true}
+    iniciar(); FAKE.Advance(5)
+    FAKE.command('diag')
+    local linea = FAKE.chat[#FAKE.chat]
+    assert(linea:find('Último envío por tipo', 1, true), linea)
+    assert(linea:find('bags %d+s %d+B'), linea)
+    assert(linea:find('alts (apagado)', 1, true), linea)
+    assert(linea:find('chat -', 1, true), linea)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

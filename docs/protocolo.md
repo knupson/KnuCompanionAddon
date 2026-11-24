@@ -14,7 +14,7 @@ KC1|sid|seq|parte|total|tipo|datos
 - `tipo`: minúsculas, hasta 16 letras.
 - `datos`: `encabezado#registro;registro;…`. Sin registros queda `encabezado#`.
 
-Después de cada tanda van 12 líneas `KCP` + 4086 `x`, para que el juego vuelque el log al disco. `pos` sale sin relleno.
+Después de cada tanda van 12 líneas `KCP` + 4086 `x`, para que el juego vuelque el log al disco. Una tanda que sólo trae `pos` lleva relleno nada más si la posición cambió desde el último volcado y pasó el intervalo `VOLCADO_GPS` de `Core.lua`.
 
 ### Escape
 

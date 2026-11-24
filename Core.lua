@@ -721,7 +721,8 @@ local function RutaFSL(fsl, mapa, x, y, titulo)
             local costo = Real(arista.cost) or 0
             acumulado, total = acumulado + costo, total + costo
             local destino = Limpiar(arista.to)
-            if type(paso) == 'table' and type(destino) == 'table' and Limpiar(destino.key) == Limpiar(paso.id) then
+            local clave = type(destino) == 'table' and Limpiar(destino.key)
+            if type(paso) == 'table' and clave ~= nil and clave == Limpiar(paso.id) then
                 if #registros < MAX_TRAMOS then
                     local m1, x1, y1 = Lugar(paso.loc)
                     local m2, x2, y2 = Lugar(paso.completionLoc)

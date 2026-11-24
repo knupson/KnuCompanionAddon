@@ -1555,5 +1555,37 @@ test('auras manda las mejoras con vencimiento en hora del servidor y se posterga
     if not ok then error(err, 0) end
 end)
 
+test('con todas las APIs nuevas devolviendo secretos ningún tipo tira error', function()
+    local S = function() return FAKE.secret end
+    local guardado = {}
+    local globales = {'GetBindLocation', 'IsInRaid', 'GetNumGroupMembers', 'GetRaidRosterInfo', 'UnitIsConnected',
+        'UnitIsDeadOrGhost', 'UnitIsGhost', 'GetXPExhaustion', 'IsResting', 'InCombatLockdown', 'GetInstanceInfo',
+        'GetInventoryItemDurability'}
+    for _, g in ipairs(globales) do guardado[g] = _G[g]; _G[g] = S end
+    local tablas = {
+        C_SkillInfo = {GetNumSkillLines=function() return 2 end, GetSkillLineInfo=S},
+        C_Reputation = {GetNumFactions=function() return 2 end, GetFactionDataByIndex=S},
+        C_CurrencyInfo = {GetCurrencyListSize=function() return 2 end, GetCurrencyListInfo=S},
+        C_DeathInfo = {GetCorpseMapPosition=S},
+        C_UnitAuras = {GetAuraDataByIndex=S},
+        FarstriderLib_API = {FindTrailTo=S, RegisterRebuildCallback=function() end},
+        ShortestPathForever = {API={version=2, Journey=S, Subscribe=function() end}},
+    }
+    for nombre, valor in pairs(tablas) do guardado[nombre] = _G[nombre]; _G[nombre] = valor end
+    local cuenta, cd = C_Item.GetItemCount, C_Container.GetItemCooldown
+    C_Item.GetItemCount, C_Container.GetItemCooldown = S, S
+    local ok, err = pcall(function()
+        recargarTips(); iniciar(); FAKE.Advance(10)
+        for _, tipo in ipairs(FAKE.ns.tipos) do
+            if tipo ~= 'chat' then assert(#FAKE.Photos(tipo) >= 1, 'sin foto: ' .. tipo) end
+        end
+    end)
+    for nombre, valor in pairs(guardado) do _G[nombre] = valor end
+    for _, g in ipairs(globales) do if guardado[g] == nil then _G[g] = nil end end
+    for nombre in pairs(tablas) do if guardado[nombre] == nil then _G[nombre] = nil end end
+    C_Item.GetItemCount, C_Container.GetItemCooldown = cuenta, cd
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

@@ -30,7 +30,7 @@ def mutaciones(lineas):
             for m in re.finditer(patron, mascara):
                 a, b = m.span()
                 reemplazo = str(int(m.group(1)) + 1) if nuevo is None else nuevo
-                yield n, linea[:a] + reemplazo + linea[b:], f'{m.group(0)} -> {reemplazo}'
+                yield n, linea[:a] + reemplazo + linea[b:], f'col {a + 1}: {m.group(0)} -> {reemplazo}'
 
 def correr():
     try:

@@ -7,9 +7,9 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 ## What it sends to the app
 
 - Bags, gear and bank, with the game's tooltips. The bank shows up after you open it once on each character (or right away with Syndicator).
-- Your character: level, gold, experience and rested XP, zone, look, gear durability, professions, reputations, currencies and active buffs (out of combat).
+- Your character: level, gold, experience and rested XP, zone, appearance, gear durability, professions, reputations, currencies and active buffs (out of combat).
 - The map: your position, the quests of the map you are on, the dungeon or raid you are in, the route of your flight, the PvP state of the zone and where your corpse is when you die.
-- Your quest log, with objectives, and when the next daily and weekly reset is.
+- Your quest log with objectives, and the time of the next daily and weekly reset.
 - Your Hearthstone: where it is bound and when it is ready again.
 - Your party or raid, and the other characters on this account with their gold. Each character shows up after it logs in once.
 - Navigation: the TomTom arrow target, and the path to your destination if you have FarstriderLib or ShortestPathForever.
@@ -31,7 +31,7 @@ If you already have the app, you do not need this page: the app ships the addon 
 - `/wowc app`: show where to get the app again.
 - `/wowc tipos`, `/wowc tipo <name> off`, `/wowc tipo <name> on`: list what the addon sends and turn one kind of data off or on, for example `alts` or `grupo`.
 
-In game messages are in Spanish for now. Made for WoW Forever. MIT license.
+In-game messages are in Spanish for now. Made for WoW Forever. MIT license.
 
 ## Feedback and bugs
 

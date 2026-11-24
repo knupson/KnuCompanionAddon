@@ -475,7 +475,7 @@ end)
 test('hello en cada entrada al mundo comparte el relleno', function()
     iniciar()
     igual(#FAKE.Photos('hello'),1)
-    igual(FAKE.Photos('hello')[1].text:match('|hello|(.*)$'),'0.10.0,16001#')
+    igual(FAKE.Photos('hello')[1].text:match('|hello|(.*)$'),'0.10.0,16001,' .. table.concat(FAKE.ns.tipos, ' ') .. ',#')
     local before=#FAKE.lines
     FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1)
     igual(#FAKE.Photos('hello'),2)
@@ -1444,6 +1444,8 @@ test('tipo off deja de mandar ese tipo y on lo vuelve a mandar; hello no se apag
     FAKE.command('tipo hello off'); assert(FAKE.chat[#FAKE.chat]:find('No existe el tipo hello', 1, true))
     FAKE.command('tipo nada off'); assert(FAKE.chat[#FAKE.chat]:find('No existe el tipo nada', 1, true))
     igual(WOWCompanionDB.apagados.alts, nil)
+    FAKE.command('tipo grupo off'); FAKE.Advance(2)
+    local hola = FAKE.Photos('hello'); assert(hola[#hola].text:match(',grupo#$'))
 end)
 
 test('alts tolera basura en las SavedVariables', function()

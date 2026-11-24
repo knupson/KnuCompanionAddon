@@ -324,6 +324,12 @@ local function Personaje()
         -- estás en una posada o ciudad (IsResting). Las dos están en la rama forever de wow-ui-source.
         Numero(GetXPExhaustion and GetXPExhaustion()) or '', (IsResting and (Limpiar(IsResting()) == true and '1' or '0')) or ''}, ','), {}
 end
+-- Tipos que el jugador apagó con /wowc tipo <nombre> off (WOWCompanionDB.apagados). hello no se apaga: la app lo usa para
+-- saber que el addon está vivo y qué versión tiene.
+local function Apagado(tipo)
+    return tipo ~= 'hello' and type(WOWCompanionDB) == 'table' and type(WOWCompanionDB.apagados) == 'table'
+        and WOWCompanionDB.apagados[tipo] == true
+end
 local function Hello()
     local version
     if C_AddOns and C_AddOns.GetAddOnMetadata then
@@ -332,7 +338,12 @@ local function Hello()
         version = GetAddOnMetadata('WOWCompanion', 'Version')
     end
     local _, _, _, interface = GetBuildInfo()
-    return P.Escape(version or '0.0.0') .. ',' .. tostring(interface), {}
+    -- Tipos que manda esta versión y los que apagó el jugador (separados por espacio), para que la app sepa qué esperar
+    -- sin depender del número de versión.
+    local apagados = {}
+    for _, tipo in ipairs(tipos) do if Apagado(tipo) then apagados[#apagados + 1] = tipo end end
+    return table.concat({P.Escape(version or '0.0.0'), tostring(interface), table.concat(tipos, ' '),
+        table.concat(apagados, ' ')}, ','), {}
 end
 -- Misiones con objetivo en el mapa actual: posición, título y objetivos (probado en Forever el 2026-11-23).
 -- Grupos de 4 por objetivo (hasta 8): cumplidos, requeridos, terminado, texto. Lo comparten quest y log.
@@ -948,12 +959,6 @@ local function Auras()
 end
 local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
--- Tipos que el jugador apagó con /wowc tipo <nombre> off (WOWCompanionDB.apagados). hello no se apaga: la app lo usa para
--- saber que el addon está vivo y qué versión tiene.
-local function Apagado(tipo)
-    return tipo ~= 'hello' and type(WOWCompanionDB) == 'table' and type(WOWCompanionDB.apagados) == 'table'
-        and WOWCompanionDB.apagados[tipo] == true
-end
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -1182,6 +1187,7 @@ local function Comando(msg)
             WOWCompanionDB.apagados[tipo] = estado == 'off' or nil
             Print(string.format(L[estado == 'off' and 'Type %s off' or 'Type %s on'], tipo))
             if estado == 'on' then Pedir('send', tipo) end
+            Pedir('event', 'hello')
         end
     elseif msg == 'chat on' or msg == 'chat off' then
         WOWCompanionDB.chat = msg == 'chat on'

@@ -44,6 +44,8 @@ Cada tipo se pide con un evento del juego, pasa por un antirrebote común y se m
 
 Los arma cada función de `Core.lua`: `bags` (`Bolsas`), `bank` (`Banco`), `equip` (`Equipo`), `char` (`Personaje`), `look` (`Look.lua`), `hello` (`Hello`), `pos` (`Posicion`), `quest` (`Misiones`), `mail` (`Correo`), `dest` (`Destino`), `log` (`Registro`), `chat` (`Chat`).
 
+`hello` sumó dos campos en 0.15.2: `versión,interfaz,tipos,apagados`, con `tipos` = los tipos que manda esta versión y `apagados` = los que apagó el jugador, separados por espacio. Se reenvía al apagar o prender un tipo.
+
 `char` sumó dos campos al final en 0.15.2: el 14 es la experiencia descansada (`GetXPExhaustion`, vacío sin descanso) y el 15 es `1` o `0` según `IsResting`.
 
 ## Tipos nuevos

@@ -2,6 +2,7 @@
 
 ## 0.15.2
 
+- `/wowc status` muestra de dónde salió la última ruta y cuánto tardó en calcularse.
 - La app recibe el camino hasta tu destino (flecha de TomTom o punto marcado en el mapa) para dibujarlo con el próximo paso. Lo calcula FarstriderLib; sin FarstriderLib, usa el viaje de ShortestPathForever.
 - Una vez por cuenta, un mensaje en el chat cuenta dónde dejar un comentario o reportar un error. También sale al pie de la ayuda de `/wowc`.
 

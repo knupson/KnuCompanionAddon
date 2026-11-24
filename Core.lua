@@ -695,16 +695,24 @@ local function APIs()
     if type(spf) ~= 'table' or type(spf.Journey) ~= 'function' or (spf.version ~= 1 and spf.version ~= 2) then spf = nil end
     return fsl, spf
 end
+-- Último cálculo con fuente, para /wowc status: FindTrailTo corre en el momento y hay que poder ver cuánto tarda.
+local rutaInfo
+local function Medir(fuente, fn, ...)
+    local inicio = debugprofilestop()
+    local cab, registros = fn(...)
+    rutaInfo = {fuente=fuente, ms=debugprofilestop() - inicio, registros=registros and #registros or 0, ok=cab ~= nil}
+    return cab, registros
+end
 local function Ruta()
     local fsl, spf = APIs()
     if fsl then
         local mapa, x, y, titulo = DestinoRuta(spf)
         if mapa then
-            local cab, registros = RutaFSL(fsl, mapa, x, y, titulo)
+            local cab, registros = Medir('fsl', RutaFSL, fsl, mapa, x, y, titulo)
             if cab then return cab, registros end
         end
     end
-    if spf then return RutaSPF(spf) end
+    if spf then return Medir('spf', RutaSPF, spf) end
     return ',,', {}
 end
 local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta}
@@ -915,6 +923,10 @@ local function Comando(msg)
         Print(string.format(L['sid=%s seq=%d enabled=%s last=%s padding=%d bytes failure=%s duration=%.2f ms max=%.2f ms'],
             sid, seq, L[enabled and 'yes' or 'no'], ultimoEnvio and tostring(ultimoEnvio) or L['none'],
             relleno, fallo or L['none'], duracion, maxima))
+        if rutaInfo then
+            Print(string.format(L['Route: source=%s found=%s duration=%.2f ms records=%d'], rutaInfo.fuente,
+                L[rutaInfo.ok and 'yes' or 'no'], rutaInfo.ms, rutaInfo.registros))
+        end
     elseif msg == 'app' then AvisoApp()
     elseif msg == 'chat on' or msg == 'chat off' then
         WOWCompanionDB.chat = msg == 'chat on'

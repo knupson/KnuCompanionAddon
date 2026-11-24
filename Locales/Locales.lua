@@ -10,6 +10,7 @@ local es = {
     ['Public channels disabled'] = 'La app ya no recibe General, Comercio ni los demás canales',
     ['sid=%s seq=%d enabled=%s last=%s padding=%d bytes failure=%s duration=%.2f ms max=%.2f ms'] =
         'sid=%s seq=%d activo=%s último=%s relleno=%d bytes fallo=%s duración=%.2f ms máxima=%.2f ms',
+    ['Route: source=%s found=%s duration=%.2f ms records=%d'] = 'Ruta: fuente=%s encontrada=%s duración=%.2f ms registros=%d',
     ['none'] = 'ninguno', ['yes'] = 'sí', ['no'] = 'no',
     ['Log write failed'] = 'Falló la escritura al log',
     ['This addon shows nothing in game: it sends your data to the desktop app. Get it at %s. Repeat this with /wowc app.'] =

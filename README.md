@@ -14,9 +14,9 @@ La carpeta del addon en el juego se llama `WOWCompanion` (`.pkgmeta`, `package-a
 
 ## Opiniones y errores
 
-Si te sirve, marcalo como favorito en [CurseForge](https://www.curseforge.com/wow/addons/knucompanion) y dejá un comentario: así lo encuentran otros jugadores de Forever. Las ideas y los pedidos también van en los comentarios. Si encontrás un error, abrí un issue en https://github.com/knupson/KnuCompanion/issues con el texto del error (BugSack lo copia) y qué estabas haciendo.
+Si te sirve, marcalo como favorito en [CurseForge](https://www.curseforge.com/wow/addons/knucompanion) y dejá un comentario: así lo encuentran otros jugadores de Forever. Las ideas y los pedidos también van en los comentarios. Si encontrás un error, abrí un issue en https://github.com/knupson/KnuCompanionAddon/issues con el texto del error (BugSack lo copia) y qué estabas haciendo.
 
-If you like it, favorite it on CurseForge and leave a comment. Bugs go to https://github.com/knupson/KnuCompanion/issues, with the BugSack text and what you were doing.
+If you like it, favorite it on CurseForge and leave a comment. Bugs go to https://github.com/knupson/KnuCompanionAddon/issues, with the BugSack text and what you were doing.
 
 ## Publicar
 

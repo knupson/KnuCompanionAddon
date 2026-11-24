@@ -932,7 +932,7 @@ test('invitación a opinar sale una vez por cuenta, en el ingreso siguiente al a
     recargarTips(); FAKE.Advance(7); igual(opinar(),0)
     FAKE.Advance(1); igual(opinar(),1); igual(WOWCompanionDB.avisoOpinar,true)
     assert(FAKE.chat[#FAKE.chat]:find('curseforge.com/wow/addons/knucompanion',1,true))
-    assert(FAKE.chat[#FAKE.chat]:find('github.com/knupson/KnuCompanion/issues',1,true))
+    assert(FAKE.chat[#FAKE.chat]:find('github.com/knupson/KnuCompanionAddon/issues',1,true))
     recargarTips(); FAKE.Advance(20); igual(opinar(),1)
 end)
 test('instalado desde la app invita a opinar en el primer ingreso; la ayuda la repite', function()

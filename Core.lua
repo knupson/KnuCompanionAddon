@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta"}
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
 local seq, relleno = 0, 0
@@ -562,7 +562,45 @@ local function Durabilidad()
     end
     return table.concat(partes, ';'), {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad}
+-- Viaje de ShortestPathForever (API pública v1/v2, Core/API.lua y types/API.lua de cjber/shortest-path-forever e154ee6).
+-- Journey() da la meta {title}, secondsLeft y legs desde el tramo en curso: {mode, text, seconds, from?, to?}, con
+-- from/to {map, x, y} cada uno en su propio uiMap. Devuelve nil, 'loading' mientras arma el plan y nil, 'none' sin viaje.
+local MAX_TRAMOS = 30
+local function Lugar(lugar)
+    lugar = Limpiar(lugar)
+    if type(lugar) ~= 'table' then return '', '', '' end
+    local mapa, x, y = Numero(lugar.map), Real(lugar.x), Real(lugar.y)
+    if not (mapa and x and y) then return '', '', '' end
+    return mapa, (string.format('%.4f', x):gsub(',', '.')), (string.format('%.4f', y):gsub(',', '.'))
+end
+local function Ruta()
+    local spf = type(ShortestPathForever) == 'table' and ShortestPathForever.API
+    if type(spf) ~= 'table' or type(spf.Journey) ~= 'function' or (spf.version ~= 1 and spf.version ~= 2) then return ',', {} end
+    local ok, viaje, motivo = pcall(spf.Journey)
+    if not ok then return ',', {} end
+    viaje = Limpiar(viaje)
+    if type(viaje) ~= 'table' then
+        if motivo == 'loading' then return nil end -- Se reintenta; el aviso 'replan' vuelve a pedirla.
+        return ',', {}
+    end
+    local meta = Limpiar(viaje.goal)
+    local titulo = type(meta) == 'table' and Texto(meta.title) or ''
+    local cab = P.Escape(P.Recortar(titulo, 120)) .. ',' .. (Numero(viaje.secondsLeft) or '')
+    local registros, tramos = {}, Limpiar(viaje.legs)
+    if type(tramos) == 'table' then
+        for i = 1, math.min(#tramos, MAX_TRAMOS) do
+            local tramo = Limpiar(tramos[i])
+            if type(tramo) == 'table' then
+                local m1, x1, y1 = Lugar(tramo.from)
+                local m2, x2, y2 = Lugar(tramo.to)
+                registros[#registros + 1] = table.concat({P.Escape(Texto(tramo.mode) or ''), m1, x1, y1, m2, x2, y2,
+                    Numero(tramo.seconds) or '', P.Escape(P.Recortar(Texto(tramo.text) or '', 120))}, ':')
+            end
+        end
+    end
+    return cab, registros
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -793,6 +831,17 @@ for _, evento in ipairs({'UPDATE_PENDING_MAIL', 'MAIL_INBOX_UPDATE', 'MAIL_CLOSE
 end
 for _, evento in ipairs({'QUEST_LOG_UPDATE', 'QUEST_WATCH_LIST_CHANGED', 'SUPER_TRACKING_CHANGED'}) do
     events:On(evento, function() Pedir('event', 'quest'); Pedir('event', 'log') end)
+end
+-- ShortestPathForever (OptionalDeps) ya publicó su API. Sólo los cambios de meta o de tramo, nunca 'guidance' (cada curva).
+do
+    local spf = type(ShortestPathForever) == 'table' and ShortestPathForever.API
+    if type(spf) == 'table' and type(spf.Subscribe) == 'function' and (spf.version == 1 or spf.version == 2) then
+        pcall(spf.Subscribe, function(cambios)
+            if type(cambios) == 'table' and (cambios.started or cambios.changed or cambios.ended or cambios.leg or cambios.replan) then
+                Pedir('event', 'ruta')
+            end
+        end)
+    end
 end
 -- Se registra al cargar (OptionalDeps: TomTom carga antes) para no perder el destino que restaura al entrar.
 if type(TomTom) == 'table' and type(TomTom.RegisterCallback) == 'function' then

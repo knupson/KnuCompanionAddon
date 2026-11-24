@@ -1,7 +1,8 @@
 # Changelog
 
-## Sin publicar
+## 0.15.2
 
+- Con ShortestPathForever instalado, la app recibe los tramos del viaje para dibujar la ruta y el próximo paso.
 - Una vez por cuenta, un mensaje en el chat cuenta dónde dejar un comentario o reportar un error. También sale al pie de la ayuda de `/wowc`.
 
 ## 0.15.1

@@ -58,13 +58,13 @@ test('predicados de secretos y fallback', function(P)
     assert(not P.EsSecreto(1,nil,nil))
 end)
 test('foto inicial y doce líneas de relleno', function()
-    FAKE.Item(); iniciar(); igual(#FAKE.lines,26)
+    FAKE.Item(); iniciar(); igual(#FAKE.lines,27)
     assert(datos():find('Cajón arrebatado',1,true))
     assert(FAKE.lines[1].text:match('^KC1|%x%x%x%x%x%x%x%x|1|1|1|bags|'))
-    for i=15,26 do igual(#FAKE.lines[i].text,4089); igual(FAKE.lines[i].text:sub(1,3),'KCP') end
+    for i=16,27 do igual(#FAKE.lines[i].text,4089); igual(FAKE.lines[i].text:sub(1,3),'KCP') end
 end)
 test('sin cambios no hay datos ni relleno', function()
-    FAKE.Item(); iniciar(); FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.lines,26)
+    FAKE.Item(); iniciar(); FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.lines,27)
 end)
 test('ráfaga agrupa eventos en un timer', function()
     for _=1,100 do FAKE.Event('BAG_UPDATE_DELAYED') end
@@ -85,19 +85,19 @@ end)
 test('fallo reintenta dos veces y status informa', function()
     FAKE.fail=true; iniciar(); SlashCmdList.WOWC('status')
     assert(FAKE.chat[#FAKE.chat]:find('Falló',1,true))
-    FAKE.Advance(1.99); igual(FAKE.calls,26)
-    FAKE.Advance(20); igual(FAKE.calls,78); igual(#FAKE.timers,0); igual(FAKE.maxTimers,1)
+    FAKE.Advance(1.99); igual(FAKE.calls,27)
+    FAKE.Advance(20); igual(FAKE.calls,81); igual(#FAKE.timers,0); igual(FAKE.maxTimers,1)
 end)
 test('foto fallida no queda marcada como enviada', function()
     FAKE.fail=true; iniciar(); FAKE.fail=false; FAKE.Advance(2)
-    igual(#FAKE.Photos(),1); assert(FAKE.Photos()[1].text:find('|15|1|1|bags|',1,true))
+    igual(#FAKE.Photos(),1); assert(FAKE.Photos()[1].text:find('|16|1|1|bags|',1,true))
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos(),1)
 end)
 test('fallo en una parte conserva el reintento', function()
     FAKE.failAt=1; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),1)
 end)
 test('fallo de relleno tampoco confirma la foto', function()
-    FAKE.failAt=15; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),2)
+    FAKE.failAt=16; iniciar(); FAKE.Advance(2); igual(#FAKE.Photos(),2)
 end)
 test('Hello funciona sin C_AddOns o si no devuelve nada', function()
     local old = C_AddOns
@@ -110,7 +110,7 @@ test('Hello funciona sin C_AddOns o si no devuelve nada', function()
     assert(FAKE.lines[6].text:match('|hello|0%.0%.0,16'))
 end)
 test('off durante reintento impide el envío', function()
-    FAKE.fail=true; iniciar(); SlashCmdList.WOWC('off'); FAKE.Advance(10); igual(FAKE.calls,26)
+    FAKE.fail=true; iniciar(); SlashCmdList.WOWC('off'); FAKE.Advance(10); igual(FAKE.calls,27)
 end)
 test('nombre por hipervínculo real', function()
     FAKE.Item(); iniciar(); assert(datos():find('Cajón arrebatado: Curiosidades de oficial',1,true))
@@ -150,10 +150,10 @@ test('encabezado genérico grande queda entero y el excesivo falla', function(P)
     assert(not pcall(P.Partes,'0123abcd',1,'bank',string.rep('a',3900),{}))
 end)
 test('todos los tipos comparten doce rellenos y sin cambios no mandan', function()
-    iniciar(); igual(#FAKE.Photos('*'),14); igual(#FAKE.lines,26)
+    iniciar(); igual(#FAKE.Photos('*'),15); igual(#FAKE.lines,27)
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Event('PLAYER_EQUIPMENT_CHANGED')
-    FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Advance(1); igual(#FAKE.lines,26)
-    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('*'),28); igual(#FAKE.lines,52)
+    FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Advance(1); igual(#FAKE.lines,27)
+    SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('*'),30); igual(#FAKE.lines,54)
 end)
 test('sin Syndicator manda nosyn una vez', function()
     iniciar(); igual(FAKE.Photos('bank')[1].text:match('|bank|(.*)'), 'nosyn#')
@@ -313,8 +313,8 @@ end)
 test('fallo de parte tip y fallo de relleno no confirman el envío', function()
     FAKE.Item({itemID=1,hyperlink=Link(1)})
     ActivarTips(function() return UnTip() end)
-    FAKE.failAt=15; iniciar(); igual(#FAKE.Photos('tip'),0)
-    FAKE.failAt=31; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
+    FAKE.failAt=16; iniciar(); igual(#FAKE.Photos('tip'),0)
+    FAKE.failAt=33; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
     FAKE.failAt=nil; FAKE.Advance(2); igual(#FAKE.Photos('tip'),2)
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),2)
     SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),3)
@@ -1156,6 +1156,47 @@ test('dur omite valores secretos y sin la API manda vacío', function()
     GetInventoryItemDurability = api
     FAKE.equip[5], FAKE.equip[6], FAKE.equip[7] = nil, nil, nil
     if not ok then error(err, 0) end
+end)
+
+local function RutaPayload()
+    local fotos = FAKE.Photos('ruta')
+    return fotos[#fotos] and fotos[#fotos].text:match('|ruta|(.*)$')
+end
+-- API falsa con la forma de ShortestPathForever.API (types/API.lua, v2): Journey y Subscribe.
+local function ConSPF(fn)
+    local spf = {version=2, minor=7, viaje=nil, motivo='none'}
+    function spf.Journey() if spf.viaje then return spf.viaje end; return nil, spf.motivo end
+    function spf.Subscribe(cb) spf.cb = cb; return function() end end
+    ShortestPathForever = {API=spf}
+    local ok, err = pcall(function() recargarTips(); fn(spf) end)
+    ShortestPathForever = nil
+    if not ok then error(err, 0) end
+end
+local function Viaje()
+    return {goal={map=1411, x=0.5, y=0.5, title='Orgrimmar, Valle'}, index=1, guided=true, secondsLeft=312.6,
+        legs={{mode='walk', text='Caminá al maestro de vuelo', seconds=40, from={map=1411, x=0.1, y=0.2}, to={map=1411, x=0.3, y=0.4}},
+              {mode='flight', text='Volá a Orgrimmar; Durotar', seconds=272, from={map=1411, x=0.3, y=0.4}, to={map=1454, x=0.45, y=0.63}},
+              {mode='portal', text='Sin lugar', seconds=0}}}
+end
+test('ruta sin ShortestPathForever manda vacío', function() iniciar(); igual(RutaPayload(), ',#') end)
+test('ruta manda meta, tiempo y tramos con el mapa de cada punta', function()
+    ConSPF(function(spf)
+        iniciar(); igual(RutaPayload(), ',#')
+        spf.viaje = Viaje(); spf.cb({started=true}); FAKE.Advance(2)
+        igual(RutaPayload(), 'Orgrimmar\\c Valle,312#walk:1411:0.1000:0.2000:1411:0.3000:0.4000:40:Caminá al maestro de vuelo;'
+            .. 'flight:1411:0.3000:0.4000:1454:0.4500:0.6300:272:Volá a Orgrimmar\\s Durotar;portal:::::::0:Sin lugar')
+        local antes = #FAKE.Photos('ruta')
+        spf.cb({guidance=true}); FAKE.Advance(2); igual(#FAKE.Photos('ruta'), antes)
+        spf.cb({replan=true}); FAKE.Advance(2); igual(#FAKE.Photos('ruta'), antes)
+        spf.viaje = nil; spf.cb({ended=true}); FAKE.Advance(2); igual(RutaPayload(), ',#')
+    end)
+end)
+test('ruta cargando se reintenta y con valores secretos los deja vacíos', function()
+    ConSPF(function(spf)
+        spf.motivo = 'loading'; iniciar(); igual(#FAKE.Photos('ruta'), 0)
+        local v = Viaje(); v.secondsLeft = FAKE.secret; v.legs = {{mode='walk', text=FAKE.secret, seconds=5, from={map=FAKE.secret, x=0.1, y=0.2}}}
+        spf.viaje = v; FAKE.Advance(3); igual(RutaPayload(), 'Orgrimmar\\c Valle,#walk:::::::5:')
+    end)
 end)
 
 print(string.format('%d pruebas, %d fallas',total,fallas))

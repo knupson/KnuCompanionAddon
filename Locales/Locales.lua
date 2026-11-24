@@ -14,6 +14,7 @@ local es = {
     ['Types (off in parentheses): %s'] = 'Tipos (entre paréntesis, los apagados): %s',
     ['Unknown type: %s. List them with /wowc tipos'] = 'No existe el tipo %s. Los ves con /wowc tipos',
     ['Type %s off'] = 'La app ya no recibe %s', ['Type %s on'] = 'La app vuelve a recibir %s',
+    ['Last type error: %s'] = 'Último tipo con error: %s',
     ['none'] = 'ninguno', ['yes'] = 'sí', ['no'] = 'no',
     ['Log write failed'] = 'Falló la escritura al log',
     ['This addon shows nothing in game: it sends your data to the desktop app. Get it at %s. Repeat this with /wowc app.'] =

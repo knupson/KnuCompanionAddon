@@ -959,6 +959,7 @@ local function Auras()
 end
 local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
+local falloTipo -- Último tipo que tiró error al armar su foto, para /wowc status.
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -968,8 +969,16 @@ local function Enviar()
         if sucio[tipo] then
             sucio[tipo] = nil
             local cab, registros, faltan, posicion
-            cab, registros, faltan, posicion = fotos[tipo]()
-            if not cab then
+            -- Un tipo que falla no corta la tanda: se anota en status y los demás siguen.
+            local okFoto, r1, r2, r3, r4 = pcall(fotos[tipo])
+            if okFoto then
+                cab, registros, faltan, posicion = r1, r2, r3, r4
+            else
+                falloTipo, forzar[tipo] = tipo .. ': ' .. tostring(r1), nil
+            end
+            if not okFoto then
+                -- Sin reintento: el mismo error se repetiría; el próximo evento del tipo lo vuelve a intentar.
+            elseif not cab then
                 -- Syndicator todavía sin personaje: se reintenta a los 2 s, hasta 3 veces por pedido.
                 intentos[tipo] = (intentos[tipo] or 0) + 1
                 if intentos[tipo] < 3 then Pedir('retry', tipo) end
@@ -1167,6 +1176,7 @@ local function Comando(msg)
         Print(string.format(L['sid=%s seq=%d enabled=%s last=%s padding=%d bytes failure=%s duration=%.2f ms max=%.2f ms'],
             sid, seq, L[enabled and 'yes' or 'no'], ultimoEnvio and tostring(ultimoEnvio) or L['none'],
             relleno, fallo or L['none'], duracion, maxima))
+        if falloTipo then Print(string.format(L['Last type error: %s'], falloTipo)) end
         if rutaInfo then
             Print(string.format(L['Route: source=%s found=%s duration=%.2f ms records=%d'], rutaInfo.fuente,
                 L[rutaInfo.ok and 'yes' or 'no'], rutaInfo.ms, rutaInfo.registros))

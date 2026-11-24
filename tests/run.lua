@@ -1587,5 +1587,18 @@ test('con todas las APIs nuevas devolviendo secretos ningún tipo tira error', f
     if not ok then error(err, 0) end
 end)
 
+test('un tipo que tira error no corta la tanda y queda en status', function()
+    C_SkillInfo = {GetNumSkillLines=function() return 1 end, GetSkillLineInfo=function() error('roto') end}
+    local ok, err = pcall(function()
+        iniciar()
+        igual(#FAKE.Photos('skill'), 0)
+        assert(#FAKE.Photos('bags') == 1 and #FAKE.Photos('rep') == 1)
+        FAKE.command('status'); assert(FAKE.chat[#FAKE.chat]:find('Último tipo con error: skill:', 1, true))
+        C_SkillInfo = nil; FAKE.Event('SKILL_LINES_CHANGED'); FAKE.Advance(2); igual(SkillPayload(), '0#')
+    end)
+    C_SkillInfo = nil
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

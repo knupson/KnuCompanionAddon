@@ -10,6 +10,10 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 - Bank, if you have Syndicator installed.
 - Level, gold, experience, zone and your character's look.
 - Your position on the map and the quests of the map you are on.
+- Your quest log, with objectives.
+- The dungeon or raid you are in, the route of the flight you are on and the durability of your gear.
+- The TomTom arrow target, if you have TomTom installed.
+- The path to your destination, if you have FarstriderLib or ShortestPathForever installed.
 - New mail alert, with the senders.
 - Guild, officer, whisper, party, raid and instance chat. General, Trade and the other public channels only if you turn them on.
 

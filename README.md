@@ -1,9 +1,10 @@
 # KnuCompanion (addon)
 
-Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion tus bolsas, banco, equipo, posición, misiones y correo. Los escribe en `Logs/General.log` y la app los lee de ahí. Solo, no muestra nada en el juego.
+Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion tus bolsas, banco, equipo, posición, misiones, correo, chat, instancia, vuelo, durabilidad y el camino a tu destino. Los escribe en `Logs/General.log` y la app los lee de ahí. Solo, no muestra nada en el juego.
 
 - App: código en `knupson/WOWCompanion` (privado); descarga en `knupson/KnuCompanion` (público, sólo releases).
-- Comandos: `/wowc on`, `off`, `send`, `status`, `gps on`, `gps off`, `app`.
+- Comandos: `/wowc on`, `off`, `send`, `status`, `gps on`, `gps off`, `chat on`, `chat off`, `chat canales on`, `chat canales off`, `app`.
+- Opcionales: Syndicator (banco), TomTom (destino de la flecha), FarstriderLib o ShortestPathForever (camino al destino).
 - Tests: `luajit tests/run.lua` desde la raíz del repo.
 - Íconos: `python tools/generar_media.py` (necesita Pillow). Genera `media/*.tga` y los PNG de `tools/preview/` para CurseForge.
 - Texto de la página de CurseForge: `docs/curseforge.md`.

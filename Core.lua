@@ -863,6 +863,7 @@ local function Alts()
     return tostring(#claves), registros
 end
 local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts}
+ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
 -- Tipos que el jugador apagó con /wowc tipo <nombre> off (WOWCompanionDB.apagados). hello no se apaga: la app lo usa para
 -- saber que el addon está vivo y qué versión tiene.
 local function Apagado(tipo)

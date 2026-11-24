@@ -1451,5 +1451,14 @@ test('alts tolera basura en las SavedVariables', function()
     iniciar(); assert(AltsPayload():match('^1#'))
 end)
 
+test('cada tipo tiene su foto, sin repetidos ni fotos sueltas', function()
+    local vistos = {}
+    for _, tipo in ipairs(FAKE.ns.tipos) do
+        assert(not vistos[tipo], 'tipo repetido: ' .. tipo); vistos[tipo] = true
+        assert(type(FAKE.ns.fotos[tipo]) == 'function', 'tipo sin foto: ' .. tipo)
+    end
+    for tipo in pairs(FAKE.ns.fotos) do assert(vistos[tipo], 'foto sin tipo: ' .. tipo) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

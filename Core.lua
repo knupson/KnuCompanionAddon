@@ -1362,7 +1362,7 @@ end
 -- El canal es de una sola vía: el addon no puede saber si la app está abierta, así que avisa una vez por cuenta.
 -- Repo público sólo con los releases de la app (decisión del user, 2026-11-23).
 local DESCARGA_APP = 'https://github.com/knupson/KnuCompanion/releases/latest'
--- El repo del addon es privado: los errores van a los issues del repo público de la app, que se publica junto con el addon.
+-- Los errores van a los issues del repo público del addon (knupson/KnuCompanionAddon).
 local PAGINA_CF, ISSUES = 'https://www.curseforge.com/wow/addons/knucompanion', 'https://github.com/knupson/KnuCompanionAddon/issues'
 local function AvisoApp()
     Print(string.format(L['This addon shows nothing in game: it sends your data to the desktop app. Get it at %s. Repeat this with /wowc app.'], DESCARGA_APP))

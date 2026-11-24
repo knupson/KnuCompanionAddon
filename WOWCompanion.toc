@@ -10,7 +10,7 @@
 ## OptionalDeps: Syndicator, TomTom, ShortestPathForever, FarstriderLib
 ## X-License: MIT
 ## X-Curse-Project-ID: 1826508
-## X-Website: https://knunet.com
+## X-Website: https://companion.knunet.com
 ## X-Category: Bags & Inventory
 
 Libs\KnuLib\KnuLib.xml

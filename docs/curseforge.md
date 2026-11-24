@@ -2,6 +2,8 @@ KnuCompanion needs the KnuCompanion desktop app. On its own it shows nothing in 
 
 Keep the app open on a second monitor and you see your bags, bank, gear and a map with your position, live, while you play.
 
+Website: https://companion.knunet.com
+
 Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 
 ## What it sends to the app
@@ -44,6 +46,8 @@ Found a bug? Open an issue at https://github.com/knupson/KnuCompanionAddon/issue
 ## En castellano
 
 Este addon necesita la app de escritorio KnuCompanion. Solo, no muestra nada en el juego. La app la abrís en otro monitor y ahí ves en vivo tus bolsas, el banco, el equipo y el mapa con tu posición mientras jugás.
+
+Web: https://companion.knunet.com
 
 Descarga de la app: https://github.com/knupson/KnuCompanion/releases/latest
 

@@ -24,6 +24,17 @@ MUTACIONES = [
     ('tipos: hello se puede apagar', "return tipo ~= 'hello' and type(WOWCompanionDB) == 'table'", "return type(WOWCompanionDB) == 'table'"),
     ('rutaFSL: clave nil coincide', "if type(paso) == 'table' and clave ~= nil and clave == Limpiar(paso.id) then", "if type(paso) == 'table' and clave == Limpiar(paso.id) then"),
     ('dur: no omite máximo cero', "if actual and maximo and maximo > 0 then", "if actual and maximo then"),
+    # Código anterior a 0.15.2.
+    ('tips: sin tope de 30 líneas', "local registros, total = {}, math.min(#lines, 30)", "local registros, total = {}, #lines"),
+    ('bags: no agrega la bolsa 5', "    if limite < 5 then ids[#ids + 1] = 5 end\n", ""),
+    ('mail: invierte el aviso', "return nuevo and '1' or '0', registros", "return nuevo and '0' or '1', registros"),
+    ('chat: canales públicos siempre', "return evento ~= 'CHAT_MSG_CHANNEL' or WOWCompanionDB.chatCanales == true", "return true"),
+    ('chat: buffer sin tope', "    if #bufferChat >= 50 then\n        table.remove(bufferChat, 1)\n        chatEnviados = math.max(0, chatEnviados - 1)\n    end\n", ""),
+    ('chat: confirmar no borra', "    for _ = 1, chatEnviados do table.remove(bufferChat, 1) end\n", ""),
+    ('enviar: reintentos sin tope', "if intentos[tipo] < 3 then Pedir('retry', tipo) end", "Pedir('retry', tipo)"),
+    ('pos: umbral de movimiento 10 veces mayor', "CambioLugar(posicion, ultimaPos, 0.002)", "CambioLugar(posicion, ultimaPos, 0.02)"),
+    ('relleno: 11 líneas', "            for _ = 1, 12 do", "            for _ = 1, 11 do"),
+    ('pedir: send no fuerza', "if motivo == 'send' or motivo == 'retry'", "if motivo == 'retry'"),
 ]
 
 def copiar():

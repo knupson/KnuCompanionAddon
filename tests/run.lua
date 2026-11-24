@@ -1775,5 +1775,14 @@ test('dur omite los slots con máximo cero', function()
     FAKE.equip[5], FAKE.equip[6] = nil, nil
 end)
 
+test('un tipo que nunca está listo se reintenta como mucho 3 veces por pedido', function()
+    FAKE.Syndicator(false, nil)
+    local consultas = 0
+    local listo = Syndicator.API.IsReady
+    Syndicator.API.IsReady = function() consultas = consultas + 1; return listo() end
+    iniciar(); FAKE.Advance(60)
+    igual(consultas, 3); igual(#FAKE.Photos('bank'), 0)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

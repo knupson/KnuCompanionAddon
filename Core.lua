@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo", "auras"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo", "auras", "pvp"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -957,7 +957,26 @@ local function Auras()
     end
     return tostring(#registros), registros
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras}
+-- Estado JcJ: tipo de zona, si lo marca una subzona y facción dueña (C_PvP.GetZonePVPInfo, como el minimapa de la rama
+-- forever) y si estás marcado para JcJ (UnitIsPVP).
+local function JcJ()
+    local tipo, subzona, faccion = '', '', ''
+    if C_PvP and C_PvP.GetZonePVPInfo then
+        local ok, t, sub, f = pcall(C_PvP.GetZonePVPInfo)
+        if ok then
+            tipo, faccion = Texto(t) or '', Texto(f) or ''
+            sub = Limpiar(sub)
+            subzona = sub == true and '1' or (sub == false and '0' or '')
+        end
+    end
+    local marcado = ''
+    if UnitIsPVP then
+        local m = Limpiar(UnitIsPVP('player'))
+        marcado = m == true and '1' or (m == false and '0' or '')
+    end
+    return table.concat({P.Escape(tipo), subzona, P.Escape(P.Recortar(faccion, 60)), marcado}, ','), {}
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras, pvp=JcJ}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
 local falloTipo -- Último tipo que tiró error al armar su foto, para /wowc status.
 local function Enviar()
@@ -1243,6 +1262,8 @@ events:On('PLAYER_REGEN_ENABLED', function()
     if aurasEnCombate then aurasEnCombate = false; Pedir('event', 'auras') end
 end)
 events:On('UNIT_AURA', function(unidad) if Texto(unidad) == 'player' then Pedir('event', 'auras') end end)
+events:On('PLAYER_FLAGS_CHANGED', function(unidad) if Texto(unidad) == 'player' then Pedir('event', 'pvp') end end)
+events:On('UNIT_FACTION', function(unidad) if Texto(unidad) == 'player' then Pedir('event', 'pvp') end end)
 events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
 events:On('UPDATE_FACTION', function() Pedir('event', 'rep') end)
 events:On('CURRENCY_DISPLAY_UPDATE', function() Pedir('event', 'monedas') end)
@@ -1278,7 +1299,7 @@ for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'PLAYER_XP_UPDATE', 
     events:On(evento, function()
         Pedir('event', 'char')
         if evento == 'PLAYER_MONEY' or evento == 'PLAYER_LEVEL_UP' then Pedir('event', 'alts') end
-        if evento:match('^ZONE_CHANGED') then EventoPosicion(); Pedir('event', 'quest'); Pedir('event', 'inst') end
+        if evento:match('^ZONE_CHANGED') then EventoPosicion(); Pedir('event', 'quest'); Pedir('event', 'inst'); Pedir('event', 'pvp') end
         if evento == 'ZONE_CHANGED_NEW_AREA' then Pedir('event', 'ruta'); Pedir('event', 'cuerpo') end
     end)
 end

@@ -134,3 +134,7 @@ Cada personaje se guarda en `WOWCompanionDB.alts` al conectarse y cuando cambian
 `cantidad#spellId,nombre,icono,cargas,duración,venceEpoch;…`
 
 Mejoras activas del jugador (`C_UnitAuras.GetAuraDataByIndex` con `HELPFUL`), hasta 40. `venceEpoch` es la hora del servidor en que se termina, redondeada a 10 s; `0` si no vence. En combate no se lee (la API las vuelve secretas): se manda al salir (`PLAYER_REGEN_ENABLED`). Sin la API: `#`. Se manda con `UNIT_AURA` del jugador.
+
+### pvp (0.15.2)
+
+`tipoZona,subzona,facción,marcado#`. `tipoZona` es lo que devuelve `C_PvP.GetZonePVPInfo` (`sanctuary`, `friendly`, `hostile`, `contested`, `combat`, `arena`…); `subzona` y `marcado` (`UnitIsPVP`) van como `1`/`0`. Sin la API: `,,,#`. Se manda con `ZONE_CHANGED*`, `PLAYER_FLAGS_CHANGED` y `UNIT_FACTION` del jugador.

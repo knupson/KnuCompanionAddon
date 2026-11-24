@@ -316,7 +316,8 @@ test('fallo de parte tip y fallo de relleno no confirman el envío', function()
     FAKE.Item({itemID=1,hyperlink=Link(1)})
     ActivarTips(function() return UnTip() end)
     FAKE.failAt=F()+1; iniciar(); igual(#FAKE.Photos('tip'),0)
-    FAKE.failAt=2*(F()+1)+1; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
+    -- Primera tanda: F() fotos + 1 tip + 12 rellenos. La segunda escribe el tip y falla en su primer relleno.
+    FAKE.failAt=(F()+13)+2; FAKE.Advance(2); igual(#FAKE.Photos('tip'),1)
     FAKE.failAt=nil; FAKE.Advance(2); igual(#FAKE.Photos('tip'),2)
     FAKE.Event('BAG_UPDATE_DELAYED'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),2)
     SlashCmdList.WOWC('send'); FAKE.Advance(1); igual(#FAKE.Photos('tip'),3)
@@ -1597,6 +1598,29 @@ test('un tipo que tira error no corta la tanda y queda en status', function()
         C_SkillInfo = nil; FAKE.Event('SKILL_LINES_CHANGED'); FAKE.Advance(2); igual(SkillPayload(), '0#')
     end)
     C_SkillInfo = nil
+    if not ok then error(err, 0) end
+end)
+
+local function PvpPayload()
+    local fotos = FAKE.Photos('pvp')
+    return fotos[#fotos] and fotos[#fotos].text:match('|pvp|(.*)$')
+end
+test('pvp sin la API manda vacío', function() iniciar(); igual(PvpPayload(), ',,,#') end)
+test('pvp manda tipo de zona, subzona, facción y marcado', function()
+    local zona = {'contested', false, ''}
+    local marcado = false
+    C_PvP = {GetZonePVPInfo=function() return zona[1], zona[2], zona[3] end}
+    UnitIsPVP = function(u) igual(u, 'player'); return marcado end
+    local ok, err = pcall(function()
+        iniciar(); igual(PvpPayload(), 'contested,0,,0#')
+        zona = {'friendly', true, 'Horda, la'}; FAKE.Event('ZONE_CHANGED'); FAKE.Advance(2)
+        igual(PvpPayload(), 'friendly,1,Horda\\c la,0#')
+        marcado = true; FAKE.Event('PLAYER_FLAGS_CHANGED', 'player'); FAKE.Advance(2)
+        igual(PvpPayload(), 'friendly,1,Horda\\c la,1#')
+        marcado = FAKE.secret; FAKE.Event('UNIT_FACTION', 'player'); FAKE.Advance(2)
+        igual(PvpPayload(), 'friendly,1,Horda\\c la,#')
+    end)
+    C_PvP, UnitIsPVP = nil, nil
     if not ok then error(err, 0) end
 end)
 

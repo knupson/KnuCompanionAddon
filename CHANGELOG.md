@@ -3,7 +3,7 @@
 ## 0.15.2
 
 - La app dibuja el camino hasta tu destino (la flecha de TomTom o el punto que marcás en el mapa) con el próximo paso. Lo calcula FarstriderLib y, si no lo tenés, ShortestPathForever.
-- Datos nuevos para la app: piedra de hogar (dónde está atada y cuándo vuelve a estar lista), profesiones, reputaciones, integrantes del grupo o la banda, monedas, mejoras activas (fuera de combate), experiencia descansada y tus personajes con su oro. Cada personaje aparece después de conectarse una vez con esta versión.
+- Datos nuevos para la app: piedra de hogar (dónde está atada y cuándo vuelve a estar lista), profesiones, reputaciones, integrantes del grupo o la banda, monedas, mejoras activas (fuera de combate), estado JcJ de la zona, experiencia descansada y tus personajes con su oro. Cada personaje aparece después de conectarse una vez con esta versión.
 - Cuando morís, la app sabe dónde quedó tu cuerpo y si ya sos fantasma.
 - `/wowc tipo <nombre> off` deja de mandar ese dato, por ejemplo `alts` o `grupo`. `/wowc tipos` muestra cuáles están apagados.
 - `/wowc status` muestra de dónde salió la última ruta y cuánto tardó en calcularse.

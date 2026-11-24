@@ -1323,6 +1323,7 @@ test('skill manda las habilidades por categoría, sin las de clase ni las secund
         {isHeader=false, name='Protección', skillID=594, skillLineCategoryID=7, parentSkillLineID=0, rank=1, maxRank=1, modifier=0},
         {isHeader=true, name='Armas, cuerpo a cuerpo', skillID=6, isCollapsed=false},
         {isHeader=false, name='Espadas', skillID=43, skillLineCategoryID=6, parentSkillLineID=0, rank=FAKE.secret, maxRank=300, modifier=5},
+        {isHeader=false, name='Secreta', skillID=1, skillLineCategoryID=FAKE.secret, parentSkillLineID=0, rank=1, maxRank=1, modifier=0},
         {isHeader=true, name='Idiomas', skillID=10, isCollapsed=true},
     }
     C_SkillInfo = {GetNumSkillLines=function() return #lineas end, GetSkillLineInfo=function(i) return lineas[i] end}
@@ -1452,8 +1453,10 @@ test('tipo off deja de mandar ese tipo y on lo vuelve a mandar; hello no se apag
 end)
 
 test('alts tolera basura en las SavedVariables', function()
-    WOWCompanionDB.alts = {[FAKE.name .. '-' .. FAKE.realm] = 'roto', [5] = {nombre='x'}, ['Otro-R'] = 7}
-    iniciar(); assert(AltsPayload():match('^1#'))
+    WOWCompanionDB.alts = {[FAKE.name .. '-' .. FAKE.realm] = 'roto', [5] = {nombre='x'}, ['Otro-R'] = 7,
+        ['Raro-R'] = {nombre={}, reino=5, clase=true, nivel='x'}}
+    iniciar(); assert(AltsPayload():match('^2#'))
+    assert(not AltsPayload():find('table:', 1, true)); assert(AltsPayload():find(';,,,,,', 1, true) or AltsPayload():find('#,,,,,', 1, true))
 end)
 
 test('cada tipo tiene su foto, sin repetidos ni fotos sueltas', function()

@@ -838,7 +838,7 @@ local function Habilidades()
             if cabecera then
                 categoria = Texto(info.name) or ''
                 if Limpiar(info.isCollapsed) == true then plegadas = plegadas + 1 end
-            elseif Numero(info.parentSkillLineID) == 0 and categoriaID ~= 7 and #registros < MAX_HABILIDADES then
+            elseif Numero(info.parentSkillLineID) == 0 and categoriaID and categoriaID ~= 7 and #registros < MAX_HABILIDADES then
                 registros[#registros + 1] = table.concat({Numero(info.skillID) or '', categoriaID or '',
                     P.Escape(P.Recortar(categoria, 60)), P.Escape(P.Recortar(Texto(info.name) or '', 80)),
                     Numero(info.rank) or '', Numero(info.maxRank) or '', Numero(info.modifier) or ''}, ',')
@@ -851,6 +851,8 @@ end
 -- y GetFactionDataByIndex. Las de un grupo plegado no se listan; el encabezado dice cuántos grupos están plegados.
 -- Un encabezado con reputación propia (isHeaderWithRep) también va como registro.
 local MAX_REPUTACIONES = 100
+-- Real puede ser negativo (odiado): se redondea hacia abajo sin pasar por Numero, que descarta negativos.
+local function Entero(v) v = Real(v); return v and math.floor(v) or '' end
 local function Reputaciones()
     if not (C_Reputation and C_Reputation.GetNumFactions and C_Reputation.GetFactionDataByIndex) then return '0', {} end
     local total = Numero(C_Reputation.GetNumFactions()) or 0
@@ -864,9 +866,8 @@ local function Reputaciones()
             if (not cabecera or Limpiar(info.isHeaderWithRep) == true) and #registros < MAX_REPUTACIONES then
                 registros[#registros + 1] = table.concat({Numero(info.factionID) or '',
                     P.Escape(P.Recortar(cabecera and '' or grupo, 60)), P.Escape(P.Recortar(nombre, 80)),
-                    Numero(info.reaction) or '', Real(info.currentStanding) and math.floor(Real(info.currentStanding)) or '',
-                    Real(info.currentReactionThreshold) and math.floor(Real(info.currentReactionThreshold)) or '',
-                    Real(info.nextReactionThreshold) and math.floor(Real(info.nextReactionThreshold)) or '',
+                    Numero(info.reaction) or '', Entero(info.currentStanding), Entero(info.currentReactionThreshold),
+                    Entero(info.nextReactionThreshold),
                     Limpiar(info.atWarWith) == true and '1' or '0', Limpiar(info.isWatched) == true and '1' or '0'}, ',')
             end
             if cabecera and not (Limpiar(info.isChild) == true) then grupo = nombre end
@@ -937,8 +938,9 @@ local function Alts()
     local registros = {}
     for i = 1, math.min(#claves, MAX_ALTS) do
         local alt = WOWCompanionDB.alts[claves[i]]
-        registros[#registros + 1] = table.concat({P.Escape(P.Recortar(tostring(alt.nombre or ''), 60)),
-            P.Escape(P.Recortar(tostring(alt.reino or ''), 60)), P.Escape(tostring(alt.clase or '')),
+        local function Cadena(v) return type(v) == 'string' and v or '' end
+        registros[#registros + 1] = table.concat({P.Escape(P.Recortar(Cadena(alt.nombre), 60)),
+            P.Escape(P.Recortar(Cadena(alt.reino), 60)), P.Escape(Cadena(alt.clase)),
             tonumber(alt.nivel) or '', tonumber(alt.oro) or '', tonumber(alt.visto) or ''}, ',')
     end
     return tostring(#claves), registros

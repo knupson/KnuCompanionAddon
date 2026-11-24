@@ -1446,5 +1446,10 @@ test('tipo off deja de mandar ese tipo y on lo vuelve a mandar; hello no se apag
     igual(WOWCompanionDB.apagados.alts, nil)
 end)
 
+test('alts tolera basura en las SavedVariables', function()
+    WOWCompanionDB.alts = {[FAKE.name .. '-' .. FAKE.realm] = 'roto', [5] = {nombre='x'}, ['Otro-R'] = 7}
+    iniciar(); assert(AltsPayload():match('^1#'))
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

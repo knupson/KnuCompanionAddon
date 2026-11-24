@@ -840,7 +840,8 @@ local function Alts()
     if nombre and reino then
         local _, claseArchivo = UnitClass('player')
         local clave = nombre .. '-' .. reino
-        local actual = WOWCompanionDB.alts[clave] or {}
+        local actual = WOWCompanionDB.alts[clave]
+        if type(actual) ~= 'table' then actual = {} end
         local clase, nivel, oro = Texto(claseArchivo), Numero(UnitLevel('player')), Numero(GetMoney())
         if actual.clase ~= clase or actual.nivel ~= nivel or actual.oro ~= oro or not actual.visto then
             WOWCompanionDB.alts[clave] = {nombre=nombre, reino=reino, clase=clase, nivel=nivel, oro=oro,

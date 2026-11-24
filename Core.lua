@@ -707,8 +707,14 @@ local function Medir(fuente, fn, ...)
     rutaInfo = {fuente=fuente, ms=debugprofilestop() - inicio, registros=registros and #registros or 0, ok=cab ~= nil}
     return cab, registros
 end
+-- FindTrailTo calcula el camino en el momento: en combate se posterga y se pide de nuevo con PLAYER_REGEN_ENABLED.
+local rutaEnCombate = false
 local function Ruta()
     local fsl, spf = APIs()
+    if fsl and InCombatLockdown and Limpiar(InCombatLockdown()) == true then
+        rutaEnCombate = true
+        return nil
+    end
     if fsl then
         local mapa, x, y, titulo = DestinoRuta(spf)
         if mapa then
@@ -1186,6 +1192,9 @@ if type(FarstriderLib_API) == 'table' and type(FarstriderLib_API.RegisterRebuild
     pcall(FarstriderLib_API.RegisterRebuildCallback, function() Pedir('event', 'ruta') end)
 end
 events:On('USER_WAYPOINT_UPDATED', function() Pedir('event', 'ruta') end)
+events:On('PLAYER_REGEN_ENABLED', function()
+    if rutaEnCombate then rutaEnCombate = false; Pedir('event', 'ruta') end
+end)
 events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
 events:On('UPDATE_FACTION', function() Pedir('event', 'rep') end)
 events:On('CURRENCY_DISPLAY_UPDATE', function() Pedir('event', 'monedas') end)

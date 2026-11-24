@@ -77,7 +77,7 @@ modo:mapa1:x1:y1:mapa2:x2:y2:segundos:texto
 
 Registros de punto, sólo con `fsl`, después de los tramos y en orden: `punto:mapa:x:y`. Son los nodos del camino completo, hasta 200.
 
-El destino sale de la flecha de TomTom, del punto marcado en el mapa (`C_Map.GetUserWaypoint`) o de la meta del viaje de ShortestPathForever. Se recalcula al cambiar el destino, al entrar a otra zona (`ZONE_CHANGED_NEW_AREA`), cuando FarstriderLib reconstruye su grafo y con los avisos `started`, `changed`, `ended`, `leg` y `replan` de ShortestPathForever. Nunca en cada curva.
+El destino sale de la flecha de TomTom, del punto marcado en el mapa (`C_Map.GetUserWaypoint`) o de la meta del viaje de ShortestPathForever. Se recalcula al cambiar el destino, al entrar a otra zona (`ZONE_CHANGED_NEW_AREA`), cuando FarstriderLib reconstruye su grafo y con los avisos `started`, `changed`, `ended`, `leg` y `replan` de ShortestPathForever. Nunca en cada curva. Con FarstriderLib no se calcula en combate: se calcula al salir (`PLAYER_REGEN_ENABLED`).
 
 ### hogar (0.15.2)
 

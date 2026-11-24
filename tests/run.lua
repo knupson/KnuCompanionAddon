@@ -1508,5 +1508,22 @@ test('cuerpo muerto busca el cuerpo en el mapa del jugador y en sus padres', fun
     if not ok then error(err, 0) end
 end)
 
+test('ruta con FarstriderLib no calcula en combate y recalcula al salir', function()
+    ConFSL(function(fsl)
+        local combate = true
+        InCombatLockdown = function() return combate end
+        C_Map.HasUserWaypoint = function() return true end
+        C_Map.GetUserWaypoint = function() return {uiMapID=1454, position={x=0.45, y=0.63}} end
+        local ok, err = pcall(function()
+            iniciar(); FAKE.Advance(10); igual(#fsl.pedidos, 0); igual(#FAKE.Photos('ruta'), 0)
+            combate = false; FAKE.Event('PLAYER_REGEN_ENABLED'); FAKE.Advance(2)
+            igual(#fsl.pedidos, 1); assert(RutaPayload():find(',fsl#', 1, true))
+            FAKE.Event('PLAYER_REGEN_ENABLED'); FAKE.Advance(2); igual(#fsl.pedidos, 1)
+        end)
+        InCombatLockdown = nil
+        if not ok then error(err, 0) end
+    end)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

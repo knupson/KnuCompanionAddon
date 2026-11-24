@@ -1383,8 +1383,8 @@ test('grupo de party manda los otros integrantes y se actualiza con su nivel', f
         UnitName = function(u) if miembros[u] then return miembros[u][1] end; return nombre(u) end
         UnitClass = function(u) if miembros[u] then return 'X', miembros[u][2] end; return clase(u) end
         UnitLevel = function(u) if miembros[u] then return miembros[u][3] end; return nivel(u) end
-        UnitIsConnected = function(u) return miembros[u][4] end
-        UnitIsDeadOrGhost = function(u) return miembros[u][5] end
+        UnitIsConnected = function(u) return miembros[u] and miembros[u][4] end
+        UnitIsDeadOrGhost = function(u) return miembros[u] and miembros[u][5] end
         iniciar(); igual(GrupoPayload(), 'party#Thrall,SHAMAN,60,1,,1,0,;Jaina\\c la,MAGE,58,1,,0,1,')
         miembros.party1[3] = 61; FAKE.Event('UNIT_LEVEL', 'party1'); FAKE.Advance(2)
         assert(GrupoPayload():find('Thrall,SHAMAN,61', 1, true))
@@ -1479,6 +1479,32 @@ test('monedas manda cada moneda con su grupo, cantidad, máximo e ícono', funct
         assert(MonedasPayload():find('Honor,1300,', 1, true))
     end)
     C_CurrencyInfo = nil
+    if not ok then error(err, 0) end
+end)
+
+local function CuerpoPayload()
+    local fotos = FAKE.Photos('cuerpo')
+    return fotos[#fotos] and fotos[#fotos].text:match('|cuerpo|(.*)$')
+end
+test('cuerpo vivo manda sólo el estado', function() iniciar(); igual(CuerpoPayload(), 'vivo,,,#') end)
+test('cuerpo muerto busca el cuerpo en el mapa del jugador y en sus padres', function()
+    local muerto, fantasma = false, false
+    UnitIsDeadOrGhost = function(u) igual(u, 'player'); return muerto or fantasma end
+    UnitIsGhost = function() return fantasma end
+    local mapaAntes, infoAntes = C_Map.GetBestMapForUnit, C_Map.GetMapInfo
+    FAKE.map = 1411
+    C_Map.GetMapInfo = function(m) if m == 1411 then return {parentMapID=1414} end; return {parentMapID=0} end
+    C_DeathInfo = {GetCorpseMapPosition=function(m) if m == 1414 then return {x=0.512345, y=0.25} end end}
+    local ok, err = pcall(function()
+        iniciar(); igual(CuerpoPayload(), 'vivo,,,#')
+        muerto = true; FAKE.Event('PLAYER_DEAD'); FAKE.Advance(2); igual(CuerpoPayload(), 'muerto,1414,0.5123,0.2500#')
+        muerto, fantasma = false, true; FAKE.Event('PLAYER_ALIVE'); FAKE.Advance(2); igual(CuerpoPayload(), 'fantasma,1414,0.5123,0.2500#')
+        C_DeathInfo.GetCorpseMapPosition = function() return nil end
+        FAKE.Event('ZONE_CHANGED_NEW_AREA'); FAKE.Advance(2); igual(CuerpoPayload(), 'fantasma,,,#')
+        fantasma = false; FAKE.Event('PLAYER_UNGHOST'); FAKE.Advance(2); igual(CuerpoPayload(), 'vivo,,,#')
+    end)
+    UnitIsDeadOrGhost, UnitIsGhost, C_DeathInfo = nil, nil, nil
+    C_Map.GetBestMapForUnit, C_Map.GetMapInfo = mapaAntes, infoAntes
     if not ok then error(err, 0) end
 end)
 

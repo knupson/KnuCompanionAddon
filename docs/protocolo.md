@@ -122,3 +122,7 @@ Se manda con `GROUP_ROSTER_UPDATE`, y con `UNIT_LEVEL` y `UNIT_CONNECTION` de un
 `cantidad#nombre,reino,claseArchivo,nivel,oroEnCobre,visto;…`
 
 Cada personaje se guarda en `WOWCompanionDB.alts` al conectarse y cuando cambian su oro o su nivel. `visto` es `GetServerTime` del último cambio. Va ordenado por nombre y reino, hasta 50. Un personaje aparece recién después de conectarse una vez con 0.15.2.
+
+### cuerpo (0.15.2)
+
+`estado,mapa,x,y#`, con `estado` igual a `vivo`, `muerto` o `fantasma`. Vivo o sin cuerpo ubicable: `estado,,,#`. El cuerpo se busca con `C_DeathInfo.GetCorpseMapPosition` en el mapa del jugador y, si no está ahí, en sus mapas padre hasta el continente. Se manda con `PLAYER_DEAD`, `PLAYER_ALIVE`, `PLAYER_UNGHOST` y `ZONE_CHANGED_NEW_AREA`.

@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -885,7 +885,32 @@ local function Monedas()
     end
     return tostring(plegados), registros
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas}
+-- Estado del jugador y dónde quedó su cuerpo, para que la app lo marque. C_DeathInfo.GetCorpseMapPosition(uiMapID) y
+-- UnitIsGhost están en la rama forever; como el mapa del mundo (DeathMapDataProvider), se pregunta por un mapa: el del
+-- jugador y, si el cuerpo no está ahí, sus mapas padre (hasta el continente).
+local function Cuerpo()
+    local estado = 'vivo'
+    if UnitIsGhost and Limpiar(UnitIsGhost('player')) == true then estado = 'fantasma'
+    elseif UnitIsDeadOrGhost and Limpiar(UnitIsDeadOrGhost('player')) == true then estado = 'muerto' end
+    if estado == 'vivo' or not (C_DeathInfo and C_DeathInfo.GetCorpseMapPosition and C_Map and C_Map.GetBestMapForUnit) then
+        return estado .. ',,,', {}
+    end
+    local mapa = Numero(C_Map.GetBestMapForUnit('player'))
+    for _ = 1, 4 do
+        if not mapa then break end
+        local ok, pos = pcall(C_DeathInfo.GetCorpseMapPosition, mapa)
+        pos = ok and Limpiar(pos)
+        if type(pos) == 'table' then
+            local x, y = Real(pos.x), Real(pos.y)
+            if x and y then return table.concat({estado, mapa, Coord(x), Coord(y)}, ','), {} end
+        end
+        local info = C_Map.GetMapInfo and Limpiar(C_Map.GetMapInfo(mapa))
+        mapa = type(info) == 'table' and Numero(info.parentMapID) or nil
+        if mapa == 0 then mapa = nil end
+    end
+    return estado .. ',,,', {}
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
 -- Tipos que el jugador apagó con /wowc tipo <nombre> off (WOWCompanionDB.apagados). hello no se apaga: la app lo usa para
 -- saber que el addon está vivo y qué versión tiene.
@@ -1164,6 +1189,9 @@ events:On('USER_WAYPOINT_UPDATED', function() Pedir('event', 'ruta') end)
 events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
 events:On('UPDATE_FACTION', function() Pedir('event', 'rep') end)
 events:On('CURRENCY_DISPLAY_UPDATE', function() Pedir('event', 'monedas') end)
+for _, evento in ipairs({'PLAYER_DEAD', 'PLAYER_ALIVE', 'PLAYER_UNGHOST'}) do
+    events:On(evento, function() Pedir('event', 'cuerpo') end)
+end
 events:On('GROUP_ROSTER_UPDATE', function() Pedir('event', 'grupo') end)
 for _, evento in ipairs({'UNIT_LEVEL', 'UNIT_CONNECTION'}) do
     events:On(evento, function(unidad)
@@ -1194,7 +1222,7 @@ for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'PLAYER_XP_UPDATE', 
         Pedir('event', 'char')
         if evento == 'PLAYER_MONEY' or evento == 'PLAYER_LEVEL_UP' then Pedir('event', 'alts') end
         if evento:match('^ZONE_CHANGED') then EventoPosicion(); Pedir('event', 'quest'); Pedir('event', 'inst') end
-        if evento == 'ZONE_CHANGED_NEW_AREA' then Pedir('event', 'ruta') end
+        if evento == 'ZONE_CHANGED_NEW_AREA' then Pedir('event', 'ruta'); Pedir('event', 'cuerpo') end
     end)
 end
 for _, evento in ipairs({'PLAYER_STARTED_MOVING', 'PLAYER_STOPPED_MOVING', 'PLAYER_STOPPED_TURNING'}) do

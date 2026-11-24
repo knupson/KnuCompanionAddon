@@ -35,6 +35,7 @@ If you already have the app, you do not need this page: the app ships the addon 
 - `/wowc chat off`, `/wowc chat on`: stop or resume sending chat.
 - `/wowc chat canales on`, `/wowc chat canales off`: add or remove General, Trade and the other public channels.
 - `/wowc app`: show where to get the app again.
+- `/wowc tipos`, `/wowc tipo <name> off`, `/wowc tipo <name> on`: list what the addon sends and turn one kind of data off or on, for example `alts` or `grupo`.
 
 In game messages are in Spanish for now. Made for WoW Forever. MIT license.
 

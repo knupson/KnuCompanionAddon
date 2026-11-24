@@ -1435,5 +1435,16 @@ test('char suma XP descansada y si estás descansando, y se actualiza con sus ev
     if not ok then error(err, 0) end
 end)
 
+test('tipo off deja de mandar ese tipo y on lo vuelve a mandar; hello no se apaga', function()
+    iniciar(); local antes = #FAKE.Photos('alts')
+    FAKE.command('tipo alts off'); assert(FAKE.chat[#FAKE.chat]:find('ya no recibe alts', 1, true))
+    FAKE.money = FAKE.money + 5; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(2); igual(#FAKE.Photos('alts'), antes)
+    FAKE.command('tipos'); assert(FAKE.chat[#FAKE.chat]:find('(alts)', 1, true))
+    FAKE.command('tipo alts on'); FAKE.Advance(2); igual(#FAKE.Photos('alts'), antes + 1)
+    FAKE.command('tipo hello off'); assert(FAKE.chat[#FAKE.chat]:find('No existe el tipo hello', 1, true))
+    FAKE.command('tipo nada off'); assert(FAKE.chat[#FAKE.chat]:find('No existe el tipo nada', 1, true))
+    igual(WOWCompanionDB.apagados.alts, nil)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

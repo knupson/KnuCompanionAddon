@@ -862,11 +862,18 @@ local function Alts()
     return tostring(#claves), registros
 end
 local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts}
+-- Tipos que el jugador apagó con /wowc tipo <nombre> off (WOWCompanionDB.apagados). hello no se apaga: la app lo usa para
+-- saber que el addon está vivo y qué versión tiene.
+local function Apagado(tipo)
+    return tipo ~= 'hello' and type(WOWCompanionDB) == 'table' and type(WOWCompanionDB.apagados) == 'table'
+        and WOWCompanionDB.apagados[tipo] == true
+end
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
     for _, tipo in ipairs(tipos) do
         if tipo == 'chat' and #bufferChat == 0 then sucio.chat = nil end
+        if sucio[tipo] and Apagado(tipo) then sucio[tipo], forzar[tipo] = nil, nil end
         if sucio[tipo] then
             sucio[tipo] = nil
             local cab, registros, faltan, posicion
@@ -1074,6 +1081,22 @@ local function Comando(msg)
                 L[rutaInfo.ok and 'yes' or 'no'], rutaInfo.ms, rutaInfo.registros))
         end
     elseif msg == 'app' then AvisoApp()
+    elseif msg == 'tipos' then
+        local lista = {}
+        for _, tipo in ipairs(tipos) do lista[#lista + 1] = Apagado(tipo) and ('(' .. tipo .. ')') or tipo end
+        Print(string.format(L['Types (off in parentheses): %s'], table.concat(lista, ' ')))
+    elseif msg:match('^tipo %S+ o[nf]f?$') then
+        local tipo, estado = msg:match('^tipo (%S+) (o[nf]f?)$')
+        local valido = false
+        for _, t in ipairs(tipos) do if t == tipo and t ~= 'hello' then valido = true end end
+        if not valido or (estado ~= 'on' and estado ~= 'off') then
+            Print(string.format(L['Unknown type: %s. List them with /wowc tipos'], tipo))
+        else
+            WOWCompanionDB.apagados = type(WOWCompanionDB.apagados) == 'table' and WOWCompanionDB.apagados or {}
+            WOWCompanionDB.apagados[tipo] = estado == 'off' or nil
+            Print(string.format(L[estado == 'off' and 'Type %s off' or 'Type %s on'], tipo))
+            if estado == 'on' then Pedir('send', tipo) end
+        end
     elseif msg == 'chat on' or msg == 'chat off' then
         WOWCompanionDB.chat = msg == 'chat on'
         if not WOWCompanionDB.chat then bufferChat, chatEnviados, sucio.chat = {}, 0, nil end

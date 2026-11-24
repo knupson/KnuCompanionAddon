@@ -2,6 +2,7 @@
 
 ## 0.15.2
 
+- `/wowc tipo <nombre> off` deja de mandarle a la app ese dato (por ejemplo `alts` o `grupo`); `/wowc tipos` lista cuáles están apagados.
 - La app recibe tu experiencia descansada y si estás descansando en una posada o ciudad.
 - La app recibe la lista de tus personajes con su clase, nivel y oro, para sumar el oro de la cuenta. Cada personaje aparece después de conectarse una vez con esta versión.
 - La app ve quién está en tu grupo o banda: clase, nivel, si está conectado y si murió.

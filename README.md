@@ -8,6 +8,7 @@ Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion tus bolsas,
 - Tests: `luajit tests/run.lua` desde la raíz del repo.
 - Íconos: `python tools/generar_media.py` (necesita Pillow). Genera `media/*.tga` y los PNG de `tools/preview/` para CurseForge.
 - Texto de la página de CurseForge: `docs/curseforge.md`.
+- Formato de cada tipo que lee la app: `docs/protocolo.md`.
 
 La carpeta del addon en el juego se llama `WOWCompanion` (`.pkgmeta`, `package-as`). La app, su instalador y las SavedVariables dependen de ese nombre.
 

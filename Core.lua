@@ -828,6 +828,8 @@ local function Grupo()
     if enBanda and GetRaidRosterInfo then
         for i = 1, math.min(total, 40) do
             local nombre, rango, subgrupo, nivel, _, claseArchivo, zona, conectado, muerto = GetRaidRosterInfo(i)
+            -- La API clásica devuelve nil (no false) en «online» si está desconectado; un secreto no es nil y queda vacío.
+            if conectado == nil then conectado = false end
             if Texto(nombre) then registros[#registros + 1] = Integrante(nombre, claseArchivo, nivel, subgrupo, zona, conectado, muerto, rango) end
         end
         return 'raid', registros

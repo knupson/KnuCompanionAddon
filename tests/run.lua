@@ -1399,9 +1399,11 @@ test('grupo de banda usa GetRaidRosterInfo con zona y rango', function()
         GetNumGroupMembers = function() return 2 end
         GetRaidRosterInfo = function(i)
             if i == 1 then return 'Thrall', 2, 1, 60, 'Chamán', 'SHAMAN', 'Orgrimmar', true, false end
-            return 'Garrosh', 0, 3, FAKE.secret, 'Guerrero', 'WARRIOR', FAKE.secret, false, true
+            if i == 2 then return 'Garrosh', 0, 3, FAKE.secret, 'Guerrero', 'WARRIOR', FAKE.secret, false, true end
+            return 'Sylvanas', 0, 4, 60, 'Cazadora', 'HUNTER', 'Entrañas', nil, nil
         end
-        iniciar(); igual(GrupoPayload(), 'raid#Thrall,SHAMAN,60,1,Orgrimmar,1,0,2;Garrosh,WARRIOR,,3,,0,1,0')
+        GetNumGroupMembers = function() return 3 end
+        iniciar(); igual(GrupoPayload(), 'raid#Thrall,SHAMAN,60,1,Orgrimmar,1,0,2;Garrosh,WARRIOR,,3,,0,1,0;Sylvanas,HUNTER,60,4,Entrañas,0,0,0')
     end)
 end)
 

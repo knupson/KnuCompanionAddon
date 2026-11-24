@@ -2,6 +2,7 @@
 
 ## 0.15.2
 
+- La app ve quién está en tu grupo o banda: clase, nivel, si está conectado y si murió.
 - La app recibe tus reputaciones, con lo que falta para el próximo nivel.
 - La app recibe tus profesiones, armas e idiomas con su nivel.
 - La app sabe dónde está atada tu piedra de hogar y cuándo vuelve a estar lista.

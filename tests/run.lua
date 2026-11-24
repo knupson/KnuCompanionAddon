@@ -1362,5 +1362,47 @@ test('rep manda las reputaciones con su grupo, umbrales, guerra y vigilada', fun
     if not ok then error(err, 0) end
 end)
 
+local function GrupoPayload()
+    local fotos = FAKE.Photos('grupo')
+    return fotos[#fotos] and fotos[#fotos].text:match('|grupo|(.*)$')
+end
+local function ConGrupo(fn)
+    local nombre, clase, nivel = UnitName, UnitClass, UnitLevel
+    local ok, err = pcall(fn)
+    IsInRaid, GetNumGroupMembers, GetRaidRosterInfo, UnitIsConnected, UnitIsDeadOrGhost = nil, nil, nil, nil, nil
+    UnitName, UnitClass, UnitLevel = nombre, clase, nivel
+    if not ok then error(err, 0) end
+end
+test('grupo solo manda vacío', function() iniciar(); igual(GrupoPayload(), '#') end)
+test('grupo de party manda los otros integrantes y se actualiza con su nivel', function()
+    ConGrupo(function()
+        local miembros = {party1={'Thrall', 'SHAMAN', 60, true, false}, party2={'Jaina, la', 'MAGE', 58, false, true}}
+        local nombre, clase, nivel = UnitName, UnitClass, UnitLevel
+        IsInRaid = function() return false end
+        GetNumGroupMembers = function() return 3 end
+        UnitName = function(u) if miembros[u] then return miembros[u][1] end; return nombre(u) end
+        UnitClass = function(u) if miembros[u] then return 'X', miembros[u][2] end; return clase(u) end
+        UnitLevel = function(u) if miembros[u] then return miembros[u][3] end; return nivel(u) end
+        UnitIsConnected = function(u) return miembros[u][4] end
+        UnitIsDeadOrGhost = function(u) return miembros[u][5] end
+        iniciar(); igual(GrupoPayload(), 'party#Thrall,SHAMAN,60,1,,1,0,;Jaina\\c la,MAGE,58,1,,0,1,')
+        miembros.party1[3] = 61; FAKE.Event('UNIT_LEVEL', 'party1'); FAKE.Advance(2)
+        assert(GrupoPayload():find('Thrall,SHAMAN,61', 1, true))
+        local antes = #FAKE.Photos('grupo')
+        FAKE.Event('UNIT_LEVEL', 'target'); FAKE.Advance(2); igual(#FAKE.Photos('grupo'), antes)
+    end)
+end)
+test('grupo de banda usa GetRaidRosterInfo con zona y rango', function()
+    ConGrupo(function()
+        IsInRaid = function() return true end
+        GetNumGroupMembers = function() return 2 end
+        GetRaidRosterInfo = function(i)
+            if i == 1 then return 'Thrall', 2, 1, 60, 'Chamán', 'SHAMAN', 'Orgrimmar', true, false end
+            return 'Garrosh', 0, 3, FAKE.secret, 'Guerrero', 'WARRIOR', FAKE.secret, false, true
+        end
+        iniciar(); igual(GrupoPayload(), 'raid#Thrall,SHAMAN,60,1,Orgrimmar,1,0,2;Garrosh,WARRIOR,,3,,0,1,0')
+    end)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

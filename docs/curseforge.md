@@ -15,6 +15,7 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 - Where your Hearthstone is bound and when it is ready again.
 - Your professions, weapon skills and languages, with their level.
 - Your reputations.
+- Your party or raid: class, level, online and dead.
 - The TomTom arrow target, if you have TomTom installed.
 - The path to your destination, if you have FarstriderLib or ShortestPathForever installed.
 - New mail alert, with the senders.

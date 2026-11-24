@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -792,7 +792,41 @@ local function Reputaciones()
     end
     return tostring(plegados), registros
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones}
+-- Integrantes del grupo o la banda. En banda, GetRaidRosterInfo (mismo orden de retornos que lee
+-- Blizzard_CompactRaidFrameContainer.lua de la rama forever: nombre, rango, subgrupo, nivel, clase, claseArchivo, zona,
+-- conectado, muerto); en grupo, las unidades party1..4 (el jugador no va). Solo: «,» sin registros.
+local function Integrante(nombre, claseArchivo, nivel, subgrupo, zona, conectado, muerto, rango)
+    return table.concat({P.Escape(P.Recortar(Texto(nombre) or '', 60)), P.Escape(Texto(claseArchivo) or ''),
+        Numero(nivel) or '', Numero(subgrupo) or '', P.Escape(P.Recortar(Texto(zona) or '', 80)),
+        Limpiar(conectado) == false and '0' or (Limpiar(conectado) and '1' or ''),
+        Limpiar(muerto) and '1' or '0', Numero(rango) or ''}, ',')
+end
+local function Grupo()
+    local registros = {}
+    local enBanda = IsInRaid and Limpiar(IsInRaid()) == true
+    local total = GetNumGroupMembers and Numero(GetNumGroupMembers()) or 0
+    if enBanda and GetRaidRosterInfo then
+        for i = 1, math.min(total, 40) do
+            local nombre, rango, subgrupo, nivel, _, claseArchivo, zona, conectado, muerto = GetRaidRosterInfo(i)
+            if Texto(nombre) then registros[#registros + 1] = Integrante(nombre, claseArchivo, nivel, subgrupo, zona, conectado, muerto, rango) end
+        end
+        return 'raid', registros
+    end
+    if total > 1 then
+        for i = 1, math.min(total - 1, 4) do
+            local unidad = 'party' .. i
+            local nombre = UnitName and UnitName(unidad)
+            if Texto(nombre) then
+                local _, claseArchivo = UnitClass(unidad)
+                registros[#registros + 1] = Integrante(nombre, claseArchivo, UnitLevel(unidad), 1, nil,
+                    UnitIsConnected and UnitIsConnected(unidad), UnitIsDeadOrGhost and UnitIsDeadOrGhost(unidad), nil)
+            end
+        end
+        return 'party', registros
+    end
+    return '', registros
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -1046,6 +1080,13 @@ end
 events:On('USER_WAYPOINT_UPDATED', function() Pedir('event', 'ruta') end)
 events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
 events:On('UPDATE_FACTION', function() Pedir('event', 'rep') end)
+events:On('GROUP_ROSTER_UPDATE', function() Pedir('event', 'grupo') end)
+for _, evento in ipairs({'UNIT_LEVEL', 'UNIT_CONNECTION'}) do
+    events:On(evento, function(unidad)
+        unidad = Texto(unidad)
+        if unidad and (unidad:match('^party') or unidad:match('^raid')) then Pedir('event', 'grupo') end
+    end)
+end
 for _, evento in ipairs({'HEARTHSTONE_BOUND', 'BAG_UPDATE_COOLDOWN'}) do
     events:On(evento, function() Pedir('event', 'hogar') end)
 end

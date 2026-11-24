@@ -1,6 +1,6 @@
 # KnuCompanion (addon)
 
-Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion tus bolsas, banco, equipo, posición, misiones, correo, chat, instancia, vuelo, durabilidad, piedra de hogar, profesiones, reputaciones, monedas, grupo, tu cuerpo al morir, tus otros personajes y el camino a tu destino. Los escribe en `Logs/General.log` y la app los lee de ahí. Solo, no muestra nada en el juego.
+Addon de WoW Forever que le pasa a la app de escritorio KnuCompanion lo que pasa en tu personaje: bolsas, banco, equipo, posición, misiones, chat, grupo y el camino a tu destino, entre otras cosas (lista completa en `docs/protocolo.md`). Los escribe en `Logs/General.log` y la app los lee de ahí. Solo, no muestra nada en el juego.
 
 - App: código en `knupson/WOWCompanion` (privado); descarga en `knupson/KnuCompanion` (público, sólo releases).
 - Comandos: `/wowc on`, `off`, `send`, `status`, `gps on`, `gps off`, `chat on`, `chat off`, `chat canales on`, `chat canales off`, `app`, `tipos`, `tipo <nombre> on`, `tipo <nombre> off`.
@@ -20,4 +20,4 @@ If you like it, favorite it on CurseForge and leave a comment. Bugs go to https:
 
 ## Publicar
 
-Una etiqueta `v*` dispara `.github/workflows/release.yml`, que arma el zip con BigWigsMods/packager y lo sube a GitHub Releases. Para que también suba a CurseForge faltan el secreto `CF_API_KEY` en el repo y `## X-Curse-Project-ID` en `WOWCompanion.toc`. Las notas salen de `CHANGELOG.md`.
+Una etiqueta `v*` dispara `.github/workflows/release.yml`: BigWigsMods/packager arma `KnuCompanion-<versión>-forever.zip` (adentro, la carpeta `WOWCompanion`) y lo sube a GitHub Releases y al proyecto 1826508 de CurseForge con el secreto `CF_API_KEY`. Las notas salen de `CHANGELOG.md`.

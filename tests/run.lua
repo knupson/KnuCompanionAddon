@@ -1729,7 +1729,7 @@ test('una foto que P.Partes rechaza no deja hueco en seq', function(P)
         local seqs = {}
         for _, l in ipairs(FAKE.Photos('*')) do seqs[#seqs + 1] = tonumber(l.text:match('^KC1|%x+|(%d+)|')) end
         table.sort(seqs)
-        for i = 2, #seqs do assert(seqs[i] - seqs[i - 1] <= 1, 'hueco entre ' .. seqs[i - 1] .. ' y ' .. seqs[i]) end
+        for i = 2, #seqs do assert(seqs[i] - seqs[i - 1] == 1, 'seq no consecutivo: ' .. seqs[i - 1] .. ' y ' .. seqs[i]) end
     end)
     P.Partes = original
     if not ok then error(err, 0) end
@@ -2013,6 +2013,43 @@ test('taxi: recuperar el control antes de despegar no borra la ruta', function()
         iniciar(); Volar(7); FAKE.Advance(1)
         FAKE.taxi = false; FAKE.Event('PLAYER_CONTROL_GAINED'); FAKE.Advance(2)
         assert(TaxiPayload() ~= ',#', 'la ruta no tendría que borrarse antes de despegar')
+    end)
+end)
+
+test('ruta con FarstriderLib traduce todos los tipos de arista a su modo', function()
+    ConFSL(function(fsl)
+        local modos = {[1000]='walk', [1001]='flight', [1002]='portal', [1003]='boat', [1004]='zeppelin', [1005]='item',
+            [1006]='spell', [1007]='leave', [1008]='tram', [999]=''}
+        local orden = {1000, 1001, 1002, 1003, 1004, 1005, 1006, 1007, 1008, 999}
+        fsl.FindTrailTo = function(mapa, x, y, z)
+            fsl.pedidos[#fsl.pedidos + 1] = {mapa, x, y, z}
+            local pasos, aristas = {}, {}
+            for i, tipo in ipairs(orden) do
+                aristas[i] = {to={key='k' .. i}, cost=1, locaId=tipo}
+                pasos[i] = {id='k' .. i, loc={mapId=1, pos={x=0.1, y=0.1}, isUI=true}, completionLoc={mapId=1, pos={x=0.2, y=0.2}, isUI=true}, loca='p'}
+            end
+            return pasos, {}, aristas
+        end
+        ConTomTom(function(flecha)
+            iniciar(); flecha({1454, 0.25, 0.75, title='D'}); FAKE.Advance(2)
+            local pedido = fsl.pedidos[#fsl.pedidos]
+            igual(pedido[1], 1454); igual(pedido[2], 0.25); igual(pedido[3], 0.75)
+            local datos = RutaPayload()
+            local i = 0
+            for registro in (datos:match('#(.*)$') .. ';'):gmatch('([^;]*);') do
+                i = i + 1
+                igual(registro:match('^([^:]*)'), modos[orden[i]])
+            end
+            igual(i, #orden)
+        end)
+    end)
+end)
+test('ruta acepta ShortestPathForever con versión 1', function()
+    ConSPF(function(spf)
+        spf.version = 1
+        recargarTips(); spf.viaje = Viaje(); iniciar()
+        assert(RutaPayload():find(',spf#', 1, true), RutaPayload())
+        spf.viaje = nil; spf.cb({ended=true}); FAKE.Advance(2); igual(RutaPayload(), ',,#')
     end)
 end)
 

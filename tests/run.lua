@@ -1404,5 +1404,21 @@ test('grupo de banda usa GetRaidRosterInfo con zona y rango', function()
     end)
 end)
 
+local function AltsPayload()
+    local fotos = FAKE.Photos('alts')
+    return fotos[#fotos] and fotos[#fotos].text:match('|alts|(.*)$')
+end
+test('alts guarda el personaje en la cuenta y manda la lista ordenada', function()
+    WOWCompanionDB.alts = {['Zul-Otro reino'] = {nombre='Zul', reino='Otro reino', clase='MAGE', nivel=12, oro=500, visto=1700000000}}
+    iniciar()
+    local yo = FAKE.name .. ',' .. FAKE.realm:gsub(',', '\\c') .. ',' .. FAKE.class .. ',' .. FAKE.level .. ',' .. FAKE.money .. ',1795366800'
+    igual(AltsPayload(), '2#' .. yo .. ';Zul,Otro reino,MAGE,12,500,1700000000')
+    local antes = #FAKE.Photos('alts')
+    FAKE.Event('PLAYER_MONEY'); FAKE.Advance(2); igual(#FAKE.Photos('alts'), antes)
+    FAKE.money = FAKE.money + 1; FAKE.Event('PLAYER_MONEY'); FAKE.Advance(2)
+    assert(AltsPayload():find(',' .. FAKE.money .. ',', 1, true))
+    igual(WOWCompanionDB.alts[FAKE.name .. '-' .. FAKE.realm].oro, FAKE.money)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

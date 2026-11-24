@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -826,7 +826,39 @@ local function Grupo()
     end
     return '', registros
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo}
+-- Personajes de la cuenta: cada uno guarda en WOWCompanionDB.alts (SavedVariables de cuenta) su clase, nivel y oro al
+-- conectarse y cuando cambian, y la app recibe la lista completa para sumar el oro de todos. «visto» es GetServerTime de la
+-- última vez que cambió algo, para no reenviar la lista en cada envío.
+local MAX_ALTS = 50
+local function Alts()
+    if type(WOWCompanionDB) ~= 'table' then return nil end
+    WOWCompanionDB.alts = type(WOWCompanionDB.alts) == 'table' and WOWCompanionDB.alts or {}
+    local nombre, reino = Texto(UnitName('player')), Texto(GetRealmName())
+    if nombre and reino then
+        local _, claseArchivo = UnitClass('player')
+        local clave = nombre .. '-' .. reino
+        local actual = WOWCompanionDB.alts[clave] or {}
+        local clase, nivel, oro = Texto(claseArchivo), Numero(UnitLevel('player')), Numero(GetMoney())
+        if actual.clase ~= clase or actual.nivel ~= nivel or actual.oro ~= oro or not actual.visto then
+            WOWCompanionDB.alts[clave] = {nombre=nombre, reino=reino, clase=clase, nivel=nivel, oro=oro,
+                visto=Numero(GetServerTime()) or actual.visto}
+        end
+    end
+    local claves = {}
+    for clave, alt in pairs(WOWCompanionDB.alts) do
+        if type(clave) == 'string' and type(alt) == 'table' then claves[#claves + 1] = clave end
+    end
+    table.sort(claves)
+    local registros = {}
+    for i = 1, math.min(#claves, MAX_ALTS) do
+        local alt = WOWCompanionDB.alts[claves[i]]
+        registros[#registros + 1] = table.concat({P.Escape(P.Recortar(tostring(alt.nombre or ''), 60)),
+            P.Escape(P.Recortar(tostring(alt.reino or ''), 60)), P.Escape(tostring(alt.clase or '')),
+            tonumber(alt.nivel) or '', tonumber(alt.oro) or '', tonumber(alt.visto) or ''}, ',')
+    end
+    return tostring(#claves), registros
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -1105,6 +1137,7 @@ end)
 for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'PLAYER_XP_UPDATE', 'ZONE_CHANGED', 'ZONE_CHANGED_NEW_AREA', 'ZONE_CHANGED_INDOORS'}) do
     events:On(evento, function()
         Pedir('event', 'char')
+        if evento == 'PLAYER_MONEY' or evento == 'PLAYER_LEVEL_UP' then Pedir('event', 'alts') end
         if evento:match('^ZONE_CHANGED') then EventoPosicion(); Pedir('event', 'quest'); Pedir('event', 'inst') end
         if evento == 'ZONE_CHANGED_NEW_AREA' then Pedir('event', 'ruta') end
     end)

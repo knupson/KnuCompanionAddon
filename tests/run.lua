@@ -1844,5 +1844,92 @@ test('Partes: hasta 64 partes', function(P)
     assert(not pcall(P.Partes, 'sid', 1, 'bags', '', registros))
 end)
 
+local function UnaOpcion(id, indice, elecciones) return {{options={{id=id, currentChoiceIndex=indice, choices=elecciones}}}} end
+test('look: sexo 3 es 1, y un sexo desconocido o una raza secreta dan ausente sin raza', function()
+    FAKE.sex = 3; Barber(UnaOpcion(7, 1, {{id=100}})); iniciar(); igual(LookPayload(), 'live,complete,1,1,10#7,100')
+    FAKE.sex = 1; FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1); igual(LookPayload(), 'none,absent,0,0,0#')
+    FAKE.sex, FAKE.raceID = 2, FAKE.secret; FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1); igual(LookPayload(), 'none,absent,0,0,0#')
+end)
+test('look: raza 0 cuenta y un modelo infinito o 0 deja el aspecto parcial', function()
+    FAKE.raceID = 0; Barber(UnaOpcion(7, 1, {{id=100}}), math.huge); iniciar()
+    igual(LookPayload(), 'live,partial,0,0,0#7,100')
+end)
+test('look: opciones inválidas dejan el aspecto parcial', function()
+    local casos = {
+        {{options=nil}, {options={{id=7, currentChoiceIndex=1, choices={{id=100}}}}}},  -- categoría sin opciones
+        {{options={{id=8, currentChoiceIndex=0, choices={{id=100}}}, {id=7, currentChoiceIndex=1, choices={{id=100}}}}}},  -- índice 0
+        {{options={{id=0, currentChoiceIndex=1, choices={{id=100}}}, {id=7, currentChoiceIndex=1, choices={{id=100}}}}}}, -- id 0
+        {{options={{id=8, currentChoiceIndex=1, choices={{id=0}}}, {id=7, currentChoiceIndex=1, choices={{id=100}}}}}},   -- elección 0
+        {{options={{id=7, currentChoiceIndex=1, choices={{id=100}}}, {id=7, currentChoiceIndex=1, choices={{id=200}}}}}}, -- id repetido
+    }
+    for i, categorias in ipairs(casos) do
+        FAKE.Reset(); Barber(categorias); iniciar()
+        local datos = LookPayload()
+        assert(datos:match('^live,partial,1,0,10#'), 'caso ' .. i .. ': ' .. datos)
+    end
+end)
+test('look: sin GUID usa nombre-reino; sin reino no guarda', function()
+    local guid = UnitGUID
+    local ok, err = pcall(function()
+        UnitGUID = nil
+        Barber(UnaOpcion(7, 1, {{id=100}})); iniciar()
+        assert(WOWCompanionDB.look[FAKE.name .. '-' .. FAKE.realm .. ':1:0:10'], 'falta la clave nombre-reino')
+        FAKE.Reset(); UnitGUID = nil; FAKE.realm = nil
+        Barber(UnaOpcion(7, 1, {{id=100}})); iniciar()
+        assert(not next(WOWCompanionDB.look), 'sin reino no tendría que guardar')
+        igual(LookPayload(), 'live,complete,1,0,10#7,100')
+    end)
+    UnitGUID = guid
+    if not ok then error(err, 0) end
+end)
+test('look: con la peluquería abierta, entrar al mundo no pisa la foto de la entrada', function()
+    local opcion = {id=7, currentChoiceIndex=1, choices={{id=100}, {id=900}}}
+    Barber({{options={opcion}}}); iniciar()
+    FAKE.Event('BARBER_SHOP_OPEN'); FAKE.Advance(1)
+    opcion.currentChoiceIndex = 2
+    FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1); igual(LookPayload(), 'live,complete,1,0,10#7,100')
+    FAKE.Event('BARBER_SHOP_CLOSE'); FAKE.Event('PLAYER_ENTERING_WORLD'); FAKE.Advance(1)
+    igual(LookPayload(), 'live,complete,1,0,10#7,900')
+end)
+test('look: aplicar sin datos borra sólo lo guardado de ese personaje, raza y sexo', function()
+    Barber(UnaOpcion(7, 1, {{id=100}})); iniciar()
+    local mio = next(WOWCompanionDB.look)
+    WOWCompanionDB.look['Otro-GUID:1:0:10'] = {records={'1,2'}, status='complete', model=10}
+    WOWCompanionDB.look[1] = {records={'3,4'}}
+    C_BarberShop = nil; FAKE.Event('BARBER_SHOP_APPEARANCE_APPLIED'); FAKE.Advance(1)
+    igual(WOWCompanionDB.look[mio], nil)
+    assert(WOWCompanionDB.look['Otro-GUID:1:0:10']); assert(WOWCompanionDB.look[1])
+end)
+test('look guardado: filtra registros con forma rara y no confunde dos modelos', function()
+    local clave = UnitGUID('player') .. ':1:0:'
+    WOWCompanionDB.look = {[clave .. '10'] = {records={'7,100', 'x,1', 5}, status='complete', model=10}}
+    C_BarberShop = nil; iniciar(); igual(LookPayload(), 'saved,partial,1,0,10#7,100')
+    FAKE.Reset()
+    WOWCompanionDB.look = {[clave .. '10'] = {records={'7,100'}, status='complete', model=10},
+        [clave .. '11'] = {records={'7,200'}, status='complete', model=11}}
+    C_BarberShop = nil; iniciar(); igual(LookPayload(), 'none,absent,1,0,0#')
+    FAKE.Reset()
+    WOWCompanionDB.look = {[clave .. '10'] = {records={'7,100'}, status='complete'}}
+    C_BarberShop = nil; iniciar(); igual(LookPayload(), 'saved,complete,1,0,0#7,100')
+end)
+test('look: cambiar de sexo descarta el aspecto vivo anterior', function()
+    Barber(UnaOpcion(7, 1, {{id=100}})); iniciar(); igual(LookPayload(), 'live,complete,1,0,10#7,100')
+    C_BarberShop = nil; FAKE.sex = 3
+    local cab = FAKE.ns.Look(); igual(cab, 'none,absent,1,1,0')
+end)
+
+test('look: id y elección 1 valen, modelo 0 es parcial y modelo 1 completo', function()
+    Barber(UnaOpcion(1, 1, {{id=1}}), 1); iniciar(); igual(LookPayload(), 'live,complete,1,0,1#1,1')
+    FAKE.Reset(); Barber(UnaOpcion(7, 1, {{id=100}}), 0); iniciar(); igual(LookPayload(), 'live,partial,1,0,0#7,100')
+end)
+test('look: aplicar sin datos con raza o sexo secretos no tira error ni borra nada', function()
+    Barber(UnaOpcion(7, 1, {{id=100}})); iniciar()
+    local guardado = next(WOWCompanionDB.look)
+    C_BarberShop = nil
+    FAKE.raceID = FAKE.secret; FAKE.ns.LookEvent('BARBER_SHOP_APPEARANCE_APPLIED')
+    FAKE.raceID, FAKE.sex = 1, FAKE.secret; FAKE.ns.LookEvent('BARBER_SHOP_APPEARANCE_APPLIED')
+    assert(WOWCompanionDB.look[guardado])
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

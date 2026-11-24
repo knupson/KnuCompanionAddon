@@ -1335,5 +1335,32 @@ test('skill manda las habilidades por categoría, sin las de clase ni las secund
     if not ok then error(err, 0) end
 end)
 
+local function RepPayload()
+    local fotos = FAKE.Photos('rep')
+    return fotos[#fotos] and fotos[#fotos].text:match('|rep|(.*)$')
+end
+test('rep sin la API manda cero', function() iniciar(); igual(RepPayload(), '0#') end)
+test('rep manda las reputaciones con su grupo, umbrales, guerra y vigilada', function()
+    local facciones = {
+        {isHeader=true, name='Kalimdor', factionID=1, isCollapsed=false},
+        {isHeader=false, name='Orgrimmar', factionID=76, reaction=5, currentStanding=3500.7, currentReactionThreshold=3000,
+            nextReactionThreshold=9000, atWarWith=false, isWatched=true},
+        {isHeader=true, isChild=true, isHeaderWithRep=true, name='Horda, vieja', factionID=67, reaction=6,
+            currentStanding=9000, currentReactionThreshold=9000, nextReactionThreshold=21000, atWarWith=false, isWatched=false},
+        {isHeader=false, name='Secreta', factionID=FAKE.secret, reaction=FAKE.secret, currentStanding=1, currentReactionThreshold=0,
+            nextReactionThreshold=3000, atWarWith=true, isWatched=false},
+        {isHeader=true, name='Otros', factionID=2, isCollapsed=true},
+    }
+    C_Reputation = {GetNumFactions=function() return #facciones end, GetFactionDataByIndex=function(i) return facciones[i] end}
+    local ok, err = pcall(function()
+        iniciar()
+        igual(RepPayload(), '1#76,Kalimdor,Orgrimmar,5,3500,3000,9000,0,1;67,,Horda\\c vieja,6,9000,9000,21000,0,0;,Kalimdor,Secreta,,1,0,3000,1,0')
+        facciones[2].currentStanding = 3600; FAKE.Event('UPDATE_FACTION'); FAKE.Advance(2)
+        assert(RepPayload():find('Orgrimmar,5,3600,', 1, true))
+    end)
+    C_Reputation = nil
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

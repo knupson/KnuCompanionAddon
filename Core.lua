@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -765,7 +765,34 @@ local function Habilidades()
     end
     return tostring(plegadas), registros
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades}
+-- Reputaciones como las lista la ventana del juego (Camelot/ReputationFrame.lua, rama forever): C_Reputation.GetNumFactions
+-- y GetFactionDataByIndex. Las de un grupo plegado no se listan; el encabezado dice cuántos grupos están plegados.
+-- Un encabezado con reputación propia (isHeaderWithRep) también va como registro.
+local MAX_REPUTACIONES = 100
+local function Reputaciones()
+    if not (C_Reputation and C_Reputation.GetNumFactions and C_Reputation.GetFactionDataByIndex) then return '0', {} end
+    local total = Numero(C_Reputation.GetNumFactions()) or 0
+    local registros, plegados, grupo = {}, 0, ''
+    for i = 1, total do
+        local info = Limpiar(C_Reputation.GetFactionDataByIndex(i))
+        if type(info) == 'table' then
+            local cabecera = Limpiar(info.isHeader) == true
+            local nombre = Texto(info.name) or ''
+            if cabecera and Limpiar(info.isCollapsed) == true then plegados = plegados + 1 end
+            if (not cabecera or Limpiar(info.isHeaderWithRep) == true) and #registros < MAX_REPUTACIONES then
+                registros[#registros + 1] = table.concat({Numero(info.factionID) or '',
+                    P.Escape(P.Recortar(cabecera and '' or grupo, 60)), P.Escape(P.Recortar(nombre, 80)),
+                    Numero(info.reaction) or '', Real(info.currentStanding) and math.floor(Real(info.currentStanding)) or '',
+                    Real(info.currentReactionThreshold) and math.floor(Real(info.currentReactionThreshold)) or '',
+                    Real(info.nextReactionThreshold) and math.floor(Real(info.nextReactionThreshold)) or '',
+                    Limpiar(info.atWarWith) == true and '1' or '0', Limpiar(info.isWatched) == true and '1' or '0'}, ',')
+            end
+            if cabecera and not (Limpiar(info.isChild) == true) then grupo = nombre end
+        end
+    end
+    return tostring(plegados), registros
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones}
 local function Enviar()
     local inicio, enviados = debugprofilestop(), {}
     sucio.tip = nil
@@ -1018,6 +1045,7 @@ if type(FarstriderLib_API) == 'table' and type(FarstriderLib_API.RegisterRebuild
 end
 events:On('USER_WAYPOINT_UPDATED', function() Pedir('event', 'ruta') end)
 events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
+events:On('UPDATE_FACTION', function() Pedir('event', 'rep') end)
 for _, evento in ipairs({'HEARTHSTONE_BOUND', 'BAG_UPDATE_COOLDOWN'}) do
     events:On(evento, function() Pedir('event', 'hogar') end)
 end

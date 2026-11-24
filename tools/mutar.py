@@ -35,6 +35,12 @@ MUTACIONES = [
     ('pos: umbral de movimiento 10 veces mayor', "CambioLugar(posicion, ultimaPos, 0.002)", "CambioLugar(posicion, ultimaPos, 0.02)"),
     ('relleno: 11 líneas', "            for _ = 1, 12 do", "            for _ = 1, 11 do"),
     ('pedir: send no fuerza', "if motivo == 'send' or motivo == 'retry'", "if motivo == 'retry'"),
+    ('taxi: no revisa a los 10 s', "        C_Timer.After(10, RevisarVuelo)\n", ""),
+    ('inst: none como instancia', "if not tipo or tipo == 'none' then return (tipo and ',none,' or ',,'), {} end", "if not tipo then return ',,', {} end"),
+    ('monedas: no cuenta plegados', "if Limpiar(info.isHeaderExpanded) == false then plegados = plegados + 1 end", ""),
+    ('grupo: solo cuenta como party', "    if total > 1 then\n        for i = 1, math.min(total - 1, 4) do", "    if total > 0 then\n        for i = 1, math.min(total - 1, 4) do"),
+    ('aviso: la app no marca el aviso', "    if ns.desdeApp then WOWCompanionDB.avisoApp = true end\n", ""),
+    ('opinar: sale siempre', "    elseif not WOWCompanionDB.avisoOpinar then", "    elseif true then"),
 ]
 
 def copiar():

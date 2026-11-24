@@ -1784,5 +1784,13 @@ test('un tipo que nunca está listo se reintenta como mucho 3 veces por pedido',
     igual(consultas, 3); igual(#FAKE.Photos('bank'), 0)
 end)
 
+test('grupo con un solo integrante (el jugador) cuenta como solo', function()
+    ConGrupo(function()
+        IsInRaid = function() return false end
+        GetNumGroupMembers = function() return 1 end
+        iniciar(); igual(GrupoPayload(), '#')
+    end)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

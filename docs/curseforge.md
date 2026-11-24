@@ -6,22 +6,14 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 
 ## What it sends to the app
 
-- Bags and gear, with the game's tooltips.
-- Bank, if you have Syndicator installed.
-- Level, gold, experience, zone and your character's look.
-- Your position on the map and the quests of the map you are on.
+- Bags, gear and bank (the bank needs Syndicator), with the game's tooltips.
+- Your character: level, gold, experience and rested XP, zone, look, gear durability, professions, reputations and currencies.
+- The map: your position, the quests of the map you are on, the dungeon or raid you are in, the route of your flight and where your corpse is when you die.
 - Your quest log, with objectives.
-- The dungeon or raid you are in, the route of the flight you are on and the durability of your gear.
-- Where your Hearthstone is bound and when it is ready again.
-- Your professions, weapon skills and languages, with their level.
-- Your reputations and currencies.
-- Where your corpse is when you die.
-- Your party or raid: class, level, online and dead.
-- Your characters on this account, with class, level and gold. Each one shows up after it logs in once.
-- The TomTom arrow target, if you have TomTom installed.
-- The path to your destination, if you have FarstriderLib or ShortestPathForever installed.
-- New mail alert, with the senders.
-- Guild, officer, whisper, party, raid and instance chat. General, Trade and the other public channels only if you turn them on.
+- Your Hearthstone: where it is bound and when it is ready again.
+- Your party or raid, and the other characters on this account with their gold. Each character shows up after it logs in once.
+- Navigation: the TomTom arrow target, and the path to your destination if you have FarstriderLib or ShortestPathForever.
+- New mail alert with the senders, and guild, officer, whisper, party, raid and instance chat. General, Trade and the other public channels only if you turn them on.
 
 The addon writes this to `Logs/General.log` in the game folder and the app reads it from there. The addon does not connect to the internet.
 

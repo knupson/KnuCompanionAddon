@@ -2172,5 +2172,22 @@ test('hermandad: un conectado sin orden de rango va al final', function()
     if not ok then error(err, 0) end
 end)
 
+test('recompensas cubre las mismas misiones que log: tope 35, sin encabezados ni id 0', function()
+    local filas = {{titulo='Cabecera', cabecera=true, id=999}, {titulo='Cero', id=0}}
+    for i = 1, 40 do filas[#filas + 1] = {titulo='M' .. i, id=1000 + i} end
+    C_QuestLog = {GetNumQuestLogEntries=function() return #filas end,
+        GetInfo=function(i) local f = filas[i]; return {title=f.titulo, isHeader=f.cabecera or false, questID=f.id, level=1} end}
+    GetQuestLogRewardXP, GetQuestLogRewardMoney = function() return 0 end, function() return 0 end
+    local ok, err = pcall(function()
+        iniciar()
+        local datos = Payload('recompensas')
+        assert(datos:match('^35#1001,'), datos:sub(1, 40))
+        assert(not datos:find('999,', 1, true) and not datos:find('#0,', 1, true) and not datos:find(';0,', 1, true))
+        local _, log = Payload('log'):gsub(';', ';'); igual(log + 1, 35)
+    end)
+    C_QuestLog, GetQuestLogRewardXP, GetQuestLogRewardMoney = nil, nil, nil
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

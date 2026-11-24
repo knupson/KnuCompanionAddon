@@ -39,3 +39,15 @@ SlashCmdList.WOWC('status'); print('tanda forzada: ' .. FAKE.chat[#FAKE.chat])
 local bytes = 0
 for _, l in ipairs(FAKE.lines) do bytes = bytes + #l.text end
 print(string.format('líneas escritas: %d, bytes: %d', #FAKE.lines, bytes))
+
+-- Costo por tipo: promedio de 200 armados de cada foto, del más caro al más barato.
+local res = {}
+for _, tipo in ipairs(FAKE.ns.tipos) do
+    local f, n, t0 = FAKE.ns.fotos[tipo], 200, os.clock()
+    for _ = 1, n do pcall(f) end
+    res[#res + 1] = {tipo, (os.clock() - t0) * 1000 / n}
+end
+table.sort(res, function(a, b) return a[2] > b[2] end)
+local partes = {}
+for _, r in ipairs(res) do partes[#partes + 1] = string.format('%s=%.3f', r[1], r[2]) end
+print('ms por foto: ' .. table.concat(partes, ' '))

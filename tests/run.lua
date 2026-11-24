@@ -1178,24 +1178,97 @@ local function Viaje()
               {mode='flight', text='Volá a Orgrimmar; Durotar', seconds=272, from={map=1411, x=0.3, y=0.4}, to={map=1454, x=0.45, y=0.63}},
               {mode='portal', text='Sin lugar', seconds=0}}}
 end
-test('ruta sin ShortestPathForever manda vacío', function() iniciar(); igual(RutaPayload(), ',#') end)
+test('ruta sin FarstriderLib ni ShortestPathForever manda vacío', function() iniciar(); igual(RutaPayload(), ',,#') end)
 test('ruta manda meta, tiempo y tramos con el mapa de cada punta', function()
     ConSPF(function(spf)
-        iniciar(); igual(RutaPayload(), ',#')
+        iniciar(); igual(RutaPayload(), ',,#')
         spf.viaje = Viaje(); spf.cb({started=true}); FAKE.Advance(2)
-        igual(RutaPayload(), 'Orgrimmar\\c Valle,312#walk:1411:0.1000:0.2000:1411:0.3000:0.4000:40:Caminá al maestro de vuelo;'
+        igual(RutaPayload(), 'Orgrimmar\\c Valle,312,spf#walk:1411:0.1000:0.2000:1411:0.3000:0.4000:40:Caminá al maestro de vuelo;'
             .. 'flight:1411:0.3000:0.4000:1454:0.4500:0.6300:272:Volá a Orgrimmar\\s Durotar;portal:::::::0:Sin lugar')
         local antes = #FAKE.Photos('ruta')
         spf.cb({guidance=true}); FAKE.Advance(2); igual(#FAKE.Photos('ruta'), antes)
         spf.cb({replan=true}); FAKE.Advance(2); igual(#FAKE.Photos('ruta'), antes)
-        spf.viaje = nil; spf.cb({ended=true}); FAKE.Advance(2); igual(RutaPayload(), ',#')
+        spf.viaje = nil; spf.cb({ended=true}); FAKE.Advance(2); igual(RutaPayload(), ',,#')
     end)
 end)
 test('ruta cargando se reintenta y con valores secretos los deja vacíos', function()
     ConSPF(function(spf)
         spf.motivo = 'loading'; iniciar(); igual(#FAKE.Photos('ruta'), 0)
         local v = Viaje(); v.secondsLeft = FAKE.secret; v.legs = {{mode='walk', text=FAKE.secret, seconds=5, from={map=FAKE.secret, x=0.1, y=0.2}}}
-        spf.viaje = v; FAKE.Advance(3); igual(RutaPayload(), 'Orgrimmar\\c Valle,#walk:::::::5:')
+        spf.viaje = v; FAKE.Advance(3); igual(RutaPayload(), 'Orgrimmar\\c Valle,,spf#walk:::::::5:')
+    end)
+end)
+
+-- API falsa con la forma de FarstriderLib_API (FarstriderLib~Core.lua y ~Pathfinding.lua, 1.5.0): FindTrailTo devuelve
+-- optimizedPath {id, loc, completionLoc, loca}, path (NavNode con getLocation) y edges {to, cost, locaId}.
+local function Nodo(clave, mapa, x, y, ui)
+    local lugar = {mapId=mapa, pos={x=x, y=y, z=0}, isUI=ui ~= false}
+    return {key=clave, getLocation=function() return lugar end}
+end
+local function ConFSL(fn)
+    local fsl = {VERSION=10500, pedidos={}}
+    local inicio, maestro, llegada = Nodo('i', 1411, 0.1, 0.2), Nodo('m', 1411, 0.3, 0.4), Nodo('d', 1454, 0.45, 0.63)
+    local mundo = Nodo('w', 1, 100, 200, false)
+    function fsl.FindTrailTo(mapa, x, y, z)
+        fsl.pedidos[#fsl.pedidos + 1] = {mapa, x, y, z}
+        if fsl.sinCamino then return {}, {}, {} end
+        local aristas = {
+            {from=inicio, to=maestro, cost=20.4, locaId=1000},
+            {from=maestro, to=mundo, cost=100, locaId=1001},
+            {from=mundo, to=llegada, cost=150, locaId=1001},
+        }
+        local pasos = {
+            {id='m', loc={mapId=1411, pos={x=0.1, y=0.2}, isUI=true}, completionLoc={mapId=1411, pos={x=0.3, y=0.4}, isUI=true},
+                loca='Caminá a Cruce: Durotar'},
+            {id='d', loc={mapId=1411, pos={x=0.3, y=0.4}, isUI=true}, completionLoc={mapId=1454, pos={x=0.45, y=0.63}, isUI=true},
+                loca='Volá a Orgrimmar'},
+        }
+        return pasos, {inicio, maestro, mundo, llegada}, aristas
+    end
+    function fsl.RegisterRebuildCallback(cb) fsl.rebuild = cb end
+    FarstriderLib_API = fsl
+    local mapaAntes, waypoint = C_Map.GetMapPosFromWorldPos, C_Map.HasUserWaypoint
+    C_Map.GetMapPosFromWorldPos = function(continente, v) igual(continente, 1); return 1414, {x=v.x / 1000, y=v.y / 1000} end
+    CreateVector2D = function(x, y) return {x=x, y=y} end
+    local ok, err = pcall(function() recargarTips(); fn(fsl) end)
+    FarstriderLib_API, CreateVector2D = nil, nil
+    C_Map.GetMapPosFromWorldPos, C_Map.HasUserWaypoint, C_Map.GetUserWaypoint = mapaAntes, waypoint, nil
+    if not ok then error(err, 0) end
+end
+local RUTA_FSL = 'Orgrimmar,270,fsl#walk:1411:0.1000:0.2000:1411:0.3000:0.4000:20:Caminá a Cruce: Durotar;'
+    .. 'flight:1411:0.3000:0.4000:1454:0.4500:0.6300:250:Volá a Orgrimmar;'
+    .. 'punto:1411:0.1000:0.2000;punto:1411:0.3000:0.4000;punto:1414:0.1000:0.2000;punto:1454:0.4500:0.6300'
+test('ruta con FarstriderLib va a la flecha de TomTom con tramos y puntos', function()
+    ConFSL(function(fsl)
+        ConTomTom(function(flecha)
+            iniciar(); igual(RutaPayload(), ',,#'); igual(#fsl.pedidos, 0)
+            flecha({1454, 0.45, 0.63, title='Orgrimmar'}); FAKE.Advance(2)
+            igual(RutaPayload(), RUTA_FSL)
+            igual(fsl.pedidos[#fsl.pedidos][1], 1454); igual(fsl.pedidos[#fsl.pedidos][4], 0)
+            local antes = #FAKE.Photos('ruta')
+            fsl.rebuild(); FAKE.Advance(2); igual(#FAKE.Photos('ruta'), antes)
+            fsl.sinCamino = true; fsl.rebuild(); FAKE.Advance(2); igual(RutaPayload(), ',,#')
+        end)
+    end)
+end)
+test('ruta con FarstriderLib usa el punto del mapa y sin destino ni SPF manda vacío', function()
+    ConFSL(function(fsl)
+        C_Map.HasUserWaypoint = function() return true end
+        C_Map.GetUserWaypoint = function() return {uiMapID=1454, position={x=0.45, y=0.63}} end
+        iniciar(); igual(RutaPayload(), (RUTA_FSL:gsub('^Orgrimmar', '')))
+        igual(fsl.pedidos[1][1], 1454)
+        C_Map.HasUserWaypoint = function() return false end
+        FAKE.Event('USER_WAYPOINT_UPDATED'); FAKE.Advance(2); igual(RutaPayload(), ',,#')
+    end)
+end)
+test('ruta con FarstriderLib sin camino cae en ShortestPathForever', function()
+    ConFSL(function(fsl)
+        fsl.sinCamino = true
+        ConSPF(function(spf)
+            spf.viaje = Viaje(); iniciar()
+            igual(fsl.pedidos[1][1], 1411)
+            assert(RutaPayload():find(',312,spf#walk:', 1, true))
+        end)
     end)
 end)
 

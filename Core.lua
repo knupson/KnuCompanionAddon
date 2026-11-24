@@ -562,30 +562,119 @@ local function Durabilidad()
     end
     return table.concat(partes, ';'), {}
 end
--- Viaje de ShortestPathForever (API pública v1/v2, Core/API.lua y types/API.lua de cjber/shortest-path-forever e154ee6).
--- Journey() da la meta {title}, secondsLeft y legs desde el tramo en curso: {mode, text, seconds, from?, to?}, con
--- from/to {map, x, y} cada uno en su propio uiMap. Devuelve nil, 'loading' mientras arma el plan y nil, 'none' sin viaje.
-local MAX_TRAMOS = 30
+-- Ruta hasta el destino para que la app la dibuje. Fuente principal FarstriderLib (FarstriderLib_API, Deathwing/FarstriderLib
+-- e884a6b, 1.5.0, toc 16001); respaldo ShortestPathForever (ShortestPathForever.API v1/v2, cjber/shortest-path-forever e154ee6).
+local MAX_TRAMOS, MAX_PUNTOS = 30, 200
+-- EdgeType de FarstriderLib~Pathfinding.lua, con los nombres de modo de SPF donde coinciden.
+local MODOS_FSL = {[1000]='walk', [1001]='flight', [1002]='portal', [1003]='boat', [1004]='zeppelin', [1005]='item',
+    [1006]='spell', [1007]='leave', [1008]='tram'}
+local function Coord(v) return (string.format('%.4f', v):gsub(',', '.')) end
+-- {map, x, y} de SPF o {mapId, pos={x,y}, isUI} de FarstriderLib, en 0-1 sobre su uiMap.
 local function Lugar(lugar)
     lugar = Limpiar(lugar)
     if type(lugar) ~= 'table' then return '', '', '' end
-    local mapa, x, y = Numero(lugar.map), Real(lugar.x), Real(lugar.y)
+    local mapa, x, y
+    if lugar.pos ~= nil then
+        local pos = Limpiar(lugar.pos)
+        if Limpiar(lugar.isUI) ~= true or type(pos) ~= 'table' then return '', '', '' end
+        mapa, x, y = Numero(lugar.mapId), Real(pos.x), Real(pos.y)
+    else
+        mapa, x, y = Numero(lugar.map), Real(lugar.x), Real(lugar.y)
+    end
     if not (mapa and x and y) then return '', '', '' end
-    return mapa, (string.format('%.4f', x):gsub(',', '.')), (string.format('%.4f', y):gsub(',', '.'))
+    return mapa, Coord(x), Coord(y)
 end
-local function Ruta()
-    local spf = type(ShortestPathForever) == 'table' and ShortestPathForever.API
-    if type(spf) ~= 'table' or type(spf.Journey) ~= 'function' or (spf.version ~= 1 and spf.version ~= 2) then return ',', {} end
+-- Nodo del camino de FarstriderLib: su Location puede venir en coordenadas del mundo (isUI falso); se pasa al uiMap
+-- con C_Map.GetMapPosFromWorldPos, como hace la propia librería en Pathfinding:GetZoneLocation.
+local function PuntoFSL(nodo)
+    nodo = Limpiar(nodo)
+    if type(nodo) ~= 'table' or type(nodo.getLocation) ~= 'function' then return nil end
+    local ok, lugar = pcall(nodo.getLocation)
+    lugar = ok and Limpiar(lugar)
+    if type(lugar) ~= 'table' or type(Limpiar(lugar.pos)) ~= 'table' then return nil end
+    if Limpiar(lugar.isUI) ~= true then
+        if not (C_Map and C_Map.GetMapPosFromWorldPos and CreateVector2D) then return nil end
+        local pos = Limpiar(lugar.pos)
+        local x, y = Real(pos.x), Real(pos.y)
+        local continente = Numero(lugar.mapId)
+        if not (continente and x and y) then return nil end
+        local okm, mapa, uiPos = pcall(C_Map.GetMapPosFromWorldPos, continente, CreateVector2D(x, y))
+        uiPos = okm and Limpiar(uiPos)
+        if type(uiPos) ~= 'table' then return nil end
+        lugar = {mapId=mapa, pos={x=uiPos.x, y=uiPos.y}, isUI=true}
+    end
+    local mapa, x, y = Lugar(lugar)
+    if mapa == '' then return nil end
+    return 'punto:' .. mapa .. ':' .. x .. ':' .. y
+end
+-- Destino: la flecha de TomTom, el punto marcado en el mapa (C_Map.GetUserWaypoint, rama forever) o la meta de SPF.
+local function DestinoRuta(spf)
+    local uid = Limpiar(destinoFlecha)
+    if type(uid) == 'table' then
+        local mapa, x, y = Numero(uid[1]), Real(uid[2]), Real(uid[3])
+        if mapa and x and y then return mapa, x, y, Texto(uid.title) or '' end
+    end
+    if C_Map and C_Map.HasUserWaypoint and C_Map.GetUserWaypoint and Limpiar(C_Map.HasUserWaypoint()) == true then
+        local punto = Limpiar(C_Map.GetUserWaypoint())
+        local pos = type(punto) == 'table' and Limpiar(punto.position)
+        if type(pos) == 'table' then
+            local mapa, x, y = Numero(punto.uiMapID), Real(pos.x), Real(pos.y)
+            if mapa and x and y then return mapa, x, y, '' end
+        end
+    end
+    if spf then
+        local ok, viaje = pcall(spf.Journey)
+        local meta = ok and type(Limpiar(viaje)) == 'table' and Limpiar(viaje.goal)
+        if type(meta) == 'table' then
+            local mapa, x, y = Numero(meta.map), Real(meta.x), Real(meta.y)
+            if mapa and x and y then return mapa, x, y, Texto(meta.title) or '' end
+        end
+    end
+end
+local function RutaFSL(fsl, mapa, x, y, titulo)
+    local ok, pasos, camino, aristas = pcall(fsl.FindTrailTo, mapa, x, y, 0)
+    pasos, camino, aristas = ok and Limpiar(pasos), ok and Limpiar(camino), ok and Limpiar(aristas)
+    if type(pasos) ~= 'table' or #pasos == 0 or type(aristas) ~= 'table' then return nil end
+    -- Cada paso optimizado cierra en la arista cuyo destino es su id; los segundos son la suma de costos hasta ahí.
+    local registros, total, acumulado, k = {}, 0, 0, 1
+    for i = 1, #aristas do
+        local arista = Limpiar(aristas[i])
+        local paso = Limpiar(pasos[k])
+        if type(arista) == 'table' then
+            local costo = Real(arista.cost) or 0
+            acumulado, total = acumulado + costo, total + costo
+            local destino = Limpiar(arista.to)
+            if type(paso) == 'table' and type(destino) == 'table' and Limpiar(destino.key) == Limpiar(paso.id) then
+                if #registros < MAX_TRAMOS then
+                    local m1, x1, y1 = Lugar(paso.loc)
+                    local m2, x2, y2 = Lugar(paso.completionLoc)
+                    registros[#registros + 1] = table.concat({MODOS_FSL[Numero(arista.locaId)] or '', m1, x1, y1, m2, x2, y2,
+                        math.floor(acumulado + 0.5), P.Escape(P.Recortar(Texto(paso.loca) or '', 120))}, ':')
+                end
+                acumulado, k = 0, k + 1
+            end
+        end
+    end
+    if type(camino) == 'table' then
+        local puntos = 0
+        for i = 1, #camino do
+            local punto = puntos < MAX_PUNTOS and PuntoFSL(camino[i])
+            if punto then registros[#registros + 1], puntos = punto, puntos + 1 end
+        end
+    end
+    return P.Escape(P.Recortar(titulo, 120)) .. ',' .. math.floor(total + 0.5) .. ',fsl', registros
+end
+local function RutaSPF(spf)
     local ok, viaje, motivo = pcall(spf.Journey)
-    if not ok then return ',', {} end
+    if not ok then return ',,', {} end
     viaje = Limpiar(viaje)
     if type(viaje) ~= 'table' then
         if motivo == 'loading' then return nil end -- Se reintenta; el aviso 'replan' vuelve a pedirla.
-        return ',', {}
+        return ',,', {}
     end
     local meta = Limpiar(viaje.goal)
     local titulo = type(meta) == 'table' and Texto(meta.title) or ''
-    local cab = P.Escape(P.Recortar(titulo, 120)) .. ',' .. (Numero(viaje.secondsLeft) or '')
+    local cab = P.Escape(P.Recortar(titulo, 120)) .. ',' .. (Numero(viaje.secondsLeft) or '') .. ',spf'
     local registros, tramos = {}, Limpiar(viaje.legs)
     if type(tramos) == 'table' then
         for i = 1, math.min(#tramos, MAX_TRAMOS) do
@@ -599,6 +688,24 @@ local function Ruta()
         end
     end
     return cab, registros
+end
+local function APIs()
+    local fsl = type(FarstriderLib_API) == 'table' and type(FarstriderLib_API.FindTrailTo) == 'function' and FarstriderLib_API or nil
+    local spf = type(ShortestPathForever) == 'table' and ShortestPathForever.API
+    if type(spf) ~= 'table' or type(spf.Journey) ~= 'function' or (spf.version ~= 1 and spf.version ~= 2) then spf = nil end
+    return fsl, spf
+end
+local function Ruta()
+    local fsl, spf = APIs()
+    if fsl then
+        local mapa, x, y, titulo = DestinoRuta(spf)
+        if mapa then
+            local cab, registros = RutaFSL(fsl, mapa, x, y, titulo)
+            if cab then return cab, registros end
+        end
+    end
+    if spf then return RutaSPF(spf) end
+    return ',,', {}
 end
 local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta}
 local function Enviar()
@@ -843,11 +950,16 @@ do
         end)
     end
 end
+-- FarstriderLib (OptionalDeps) recalcula el grafo al aprender vuelos: la ruta se vuelve a pedir.
+if type(FarstriderLib_API) == 'table' and type(FarstriderLib_API.RegisterRebuildCallback) == 'function' then
+    pcall(FarstriderLib_API.RegisterRebuildCallback, function() Pedir('event', 'ruta') end)
+end
+events:On('USER_WAYPOINT_UPDATED', function() Pedir('event', 'ruta') end)
 -- Se registra al cargar (OptionalDeps: TomTom carga antes) para no perder el destino que restaura al entrar.
 if type(TomTom) == 'table' and type(TomTom.RegisterCallback) == 'function' then
     pcall(TomTom.RegisterCallback, ns, 'ArrowTargetChanged', function(_, uid)
         destinoFlecha = uid
-        Pedir('event', 'dest')
+        Pedir('event', 'dest'); Pedir('event', 'ruta')
     end)
 end
 events:On('PLAYER_EQUIPMENT_CHANGED', function() Pedir('event', 'equip'); Pedir('event', 'char'); Pedir('event', 'dur') end)
@@ -859,6 +971,7 @@ for _, evento in ipairs({'PLAYER_MONEY', 'PLAYER_LEVEL_UP', 'PLAYER_XP_UPDATE', 
     events:On(evento, function()
         Pedir('event', 'char')
         if evento:match('^ZONE_CHANGED') then EventoPosicion(); Pedir('event', 'quest'); Pedir('event', 'inst') end
+        if evento == 'ZONE_CHANGED_NEW_AREA' then Pedir('event', 'ruta') end
     end)
 end
 for _, evento in ipairs({'PLAYER_STARTED_MOVING', 'PLAYER_STOPPED_MOVING', 'PLAYER_STOPPED_TURNING'}) do

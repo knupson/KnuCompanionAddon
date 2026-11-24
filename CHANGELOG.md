@@ -1,5 +1,9 @@
 # Changelog
 
+## Sin publicar
+
+- Una vez por cuenta, un mensaje en el chat cuenta dónde dejar un comentario o reportar un error. También sale al pie de la ayuda de `/wowc`.
+
 ## 0.15.1
 
 - La app sabe en qué mazmorra o banda estás, para abrir su mapa sola.

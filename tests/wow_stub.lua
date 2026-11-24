@@ -21,7 +21,7 @@ function FAKE.Reset()
     SlashCmdList, NUM_BAG_SLOTS = {}, 4
     FAKE.ns = {}
     -- Aviso de la app ya visto: su timer de 8 s cambiaría las cuentas de timers y chat de las demás pruebas.
-    WOWCompanionDB, C_BarberShop = {avisoApp=true}, nil
+    WOWCompanionDB, C_BarberShop = {avisoApp=true, avisoOpinar=true}, nil
     assert(loadfile('Locales/Locales.lua'))('WOWCompanion', FAKE.ns)
     assert(loadfile('Proto.lua'))('WOWCompanion', FAKE.ns)
     assert(loadfile('Look.lua'))('WOWCompanion', FAKE.ns)

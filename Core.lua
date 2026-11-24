@@ -741,8 +741,13 @@ end
 -- El canal es de una sola vía: el addon no puede saber si la app está abierta, así que avisa una vez por cuenta.
 -- Repo público sólo con los releases de la app (decisión del user, 2026-11-23).
 local DESCARGA_APP = 'https://github.com/knupson/KnuCompanion/releases/latest'
+-- El repo del addon es privado: los errores van a los issues del repo público de la app, que se publica junto con el addon.
+local PAGINA_CF, ISSUES = 'https://www.curseforge.com/wow/addons/knucompanion', 'https://github.com/knupson/KnuCompanion/issues'
 local function AvisoApp()
     Print(string.format(L['This addon shows nothing in game: it sends your data to the desktop app. Get it at %s. Repeat this with /wowc app.'], DESCARGA_APP))
+end
+local function AvisoOpinar()
+    Print(string.format(L['Like it? Favorite it or comment at %s. Errors: %s, with the BugSack text.'], PAGINA_CF, ISSUES))
 end
 local function Comando(msg)
     msg = (msg or ''):match('^%s*(.-)%s*$'):lower()
@@ -773,7 +778,7 @@ local function Comando(msg)
     elseif msg == 'chat canales on' or msg == 'chat canales off' then
         WOWCompanionDB.chatCanales = msg == 'chat canales on'
         Print(L[WOWCompanionDB.chatCanales and 'Public channels enabled' or 'Public channels disabled'])
-    else Print(L['Usage: /wowc on | off | send | status']) end
+    else Print(L['Usage: /wowc on | off | send | status']); AvisoOpinar() end
 end
 events:On('PLAYER_ENTERING_WORLD', function() ns.LookEvent('PLAYER_ENTERING_WORLD'); Pedir('world'); Direccion(); AgendarGPS() end)
 for _, event in ipairs({'BARBER_SHOP_OPEN', 'BARBER_SHOP_APPEARANCE_APPLIED', 'BARBER_SHOP_CLOSE'}) do
@@ -840,6 +845,10 @@ KL:OnLogin(function()
         WOWCompanionDB.avisoApp = true
         -- Unos segundos después, para que no se pierda entre los mensajes de entrada al mundo.
         C_Timer.After(8, AvisoApp)
+    elseif not WOWCompanionDB.avisoOpinar then
+        -- Una vez por cuenta (CONVENCION.md 3.1), en un ingreso distinto del aviso de la app para no juntar dos avisos.
+        WOWCompanionDB.avisoOpinar = true
+        C_Timer.After(8, AvisoOpinar)
     end
     if Syndicator and Syndicator.CallbackRegistry then
         Syndicator.CallbackRegistry:RegisterCallback('Ready', function() Pedir('ready', 'bank') end, ns)

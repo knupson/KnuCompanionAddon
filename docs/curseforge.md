@@ -29,6 +29,12 @@ If you already have the app, you do not need this page: the app ships the addon 
 
 In game messages are in Spanish for now. Made for WoW Forever. MIT license.
 
+## Feedback and bugs
+
+If you like it, add it to your favorites (the star on this page) and leave a comment. That helps other Forever players find it. Ideas and requests are welcome in the comments.
+
+Found a bug? Open an issue at https://github.com/knupson/KnuCompanion/issues or leave a comment. Paste the error text (BugSack copies it) and say what you were doing.
+
 ## En castellano
 
 Este addon necesita la app de escritorio KnuCompanion. Solo, no muestra nada en el juego. La app la abrís en otro monitor y ahí ves en vivo tus bolsas, el banco, el equipo y el mapa con tu posición mientras jugás.
@@ -36,3 +42,7 @@ Este addon necesita la app de escritorio KnuCompanion. Solo, no muestra nada en 
 Descarga de la app: https://github.com/knupson/KnuCompanion/releases/latest
 
 Si ya tenés la app, no hace falta bajarlo de acá: la app trae el addon y lo instala con el botón «Instalar addon».
+
+Si te sirve, marcalo como favorito (la estrella de esta página) y dejá un comentario: así lo encuentran otros jugadores de Forever. Las ideas y los pedidos también van en los comentarios.
+
+Si encontrás un error, abrí un issue en https://github.com/knupson/KnuCompanion/issues o dejá un comentario. Pegá el texto del error (BugSack lo copia) y contá qué estabas haciendo.

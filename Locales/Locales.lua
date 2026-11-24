@@ -14,6 +14,8 @@ local es = {
     ['Log write failed'] = 'Falló la escritura al log',
     ['This addon shows nothing in game: it sends your data to the desktop app. Get it at %s. Repeat this with /wowc app.'] =
         'KnuCompanion necesita la app de escritorio, sin ella no muestra nada. Bajala de %s',
+    ['Like it? Favorite it or comment at %s. Errors: %s, with the BugSack text.'] =
+        '¿Te sirve KnuCompanion? Marcalo como favorito o dejá un comentario en %s. Si algo falla, contalo en %s con el texto del error (BugSack lo copia).',
 }
 -- La UI del addon se mantiene en castellano también con el cliente en otro idioma.
 ns.L = LibStub('KnuLib-1.0'):NewLocale(es, es)

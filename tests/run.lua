@@ -917,7 +917,25 @@ test('instalado desde la app no muestra el aviso ni después de actualizar', fun
 end)
 test('/wowc app repite el aviso y figura en el uso', function()
     primerIngreso(); FAKE.Advance(8); FAKE.command('app'); igual(avisos(),2)
-    FAKE.command('cualquiera'); assert(FAKE.chat[#FAKE.chat]:find('| app',1,true))
+    FAKE.command('cualquiera'); assert(FAKE.chat[#FAKE.chat - 1]:find('| app',1,true))
+end)
+local function opinar()
+    local n = 0
+    for _, s in ipairs(FAKE.chat) do if s:find('favorito',1,true) then n = n + 1 end end
+    return n
+end
+test('invitación a opinar sale una vez por cuenta, en el ingreso siguiente al aviso de la app', function()
+    primerIngreso(); FAKE.Advance(20); igual(opinar(),0); igual(avisos(),1)
+    recargarTips(); FAKE.Advance(7); igual(opinar(),0)
+    FAKE.Advance(1); igual(opinar(),1); igual(WOWCompanionDB.avisoOpinar,true)
+    assert(FAKE.chat[#FAKE.chat]:find('curseforge.com/wow/addons/knucompanion',1,true))
+    assert(FAKE.chat[#FAKE.chat]:find('github.com/knupson/KnuCompanion/issues',1,true))
+    recargarTips(); FAKE.Advance(20); igual(opinar(),1)
+end)
+test('instalado desde la app invita a opinar en el primer ingreso; la ayuda la repite', function()
+    FAKE.ns.desdeApp = true; primerIngreso(); FAKE.Advance(8); FAKE.ns.desdeApp = nil
+    igual(avisos(),0); igual(opinar(),1)
+    FAKE.command('cualquiera'); igual(opinar(),2)
 end)
 
 local function DestPayload()

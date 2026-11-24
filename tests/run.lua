@@ -1525,5 +1525,33 @@ test('ruta con FarstriderLib no calcula en combate y recalcula al salir', functi
     end)
 end)
 
+local function AurasPayload()
+    local fotos = FAKE.Photos('auras')
+    return fotos[#fotos] and fotos[#fotos].text:match('|auras|(.*)$')
+end
+test('auras sin la API manda vacío', function() iniciar(); igual(AurasPayload(), '#') end)
+test('auras manda las mejoras con vencimiento en hora del servidor y se posterga en combate', function()
+    local lista = {
+        {spellId=19740, name='Bendición, de poderío', icon=135906, applications=0, duration=300, expirationTime=FAKE.now + 120},
+        {spellId=24705, name='Bien descansado', icon=1, applications=2, duration=0, expirationTime=0},
+    }
+    local combate = false
+    InCombatLockdown = function() return combate end
+    C_UnitAuras = {GetAuraDataByIndex=function(u, i, f) igual(u, 'player'); igual(f, 'HELPFUL'); return lista[i] end}
+    local ok, err = pcall(function()
+        iniciar()
+        local vence = math.floor((1795366800 + 120 - 1) / 10 + 0.5) * 10
+        igual(AurasPayload(), '2#19740,Bendición\\c de poderío,135906,0,300,' .. vence .. ';24705,Bien descansado,1,2,0,0')
+        combate = true; lista[2] = nil; FAKE.Event('UNIT_AURA', 'player'); FAKE.Advance(10)
+        assert(AurasPayload():match('^2#'))
+        combate = false; FAKE.Event('PLAYER_REGEN_ENABLED'); FAKE.Advance(2)
+        assert(AurasPayload():match('^1#19740,'))
+        local antes = #FAKE.Photos('auras')
+        FAKE.Event('UNIT_AURA', 'target'); FAKE.Advance(2); igual(#FAKE.Photos('auras'), antes)
+    end)
+    InCombatLockdown, C_UnitAuras = nil, nil
+    if not ok then error(err, 0) end
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

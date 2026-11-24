@@ -126,3 +126,9 @@ Cada personaje se guarda en `WOWCompanionDB.alts` al conectarse y cuando cambian
 ### cuerpo (0.15.2)
 
 `estado,mapa,x,y#`, con `estado` igual a `vivo`, `muerto` o `fantasma`. Vivo o sin cuerpo ubicable: `estado,,,#`. El cuerpo se busca con `C_DeathInfo.GetCorpseMapPosition` en el mapa del jugador y, si no está ahí, en sus mapas padre hasta el continente. Se manda con `PLAYER_DEAD`, `PLAYER_ALIVE`, `PLAYER_UNGHOST` y `ZONE_CHANGED_NEW_AREA`.
+
+### auras (0.15.2)
+
+`cantidad#spellId,nombre,icono,cargas,duración,venceEpoch;…`
+
+Mejoras activas del jugador (`C_UnitAuras.GetAuraDataByIndex` con `HELPFUL`), hasta 40. `venceEpoch` es la hora del servidor en que se termina, redondeada a 10 s; `0` si no vence. En combate no se lee (la API las vuelve secretas): se manda al salir (`PLAYER_REGEN_ENABLED`). Sin la API: `#`. Se manda con `UNIT_AURA` del jugador.

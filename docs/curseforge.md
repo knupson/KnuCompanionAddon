@@ -7,7 +7,7 @@ Get the app: https://github.com/knupson/KnuCompanion/releases/latest
 ## What it sends to the app
 
 - Bags, gear and bank (the bank needs Syndicator), with the game's tooltips.
-- Your character: level, gold, experience and rested XP, zone, look, gear durability, professions, reputations and currencies.
+- Your character: level, gold, experience and rested XP, zone, look, gear durability, professions, reputations, currencies and active buffs (out of combat).
 - The map: your position, the quests of the map you are on, the dungeon or raid you are in, the route of your flight and where your corpse is when you die.
 - Your quest log, with objectives.
 - Your Hearthstone: where it is bound and when it is ready again.

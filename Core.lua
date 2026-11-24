@@ -18,7 +18,7 @@ end
 local server, perfil = Numero(GetServerTime()) or 0, Numero(debugprofilestop()) or 0
 local sid = string.format('%08x', (server + math.floor(perfil) + math.random(0, 2147483646)) % 4294967296)
 local enabled, pending = true, false
-local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo"}
+local tipos = {"bags", "bank", "equip", "char", "look", "hello", "pos", "quest", "mail", "dest", "log", "chat", "inst", "taxi", "dur", "ruta", "hogar", "skill", "rep", "grupo", "alts", "monedas", "cuerpo", "auras"}
 ns.tipos = tipos -- Las pruebas cuentan líneas por ronda a partir de cuántos tipos hay.
 local sinRelleno = {pos=true}
 local sucio, ultima, intentos, forzar, despues = {}, {}, {}, {}, {}
@@ -916,7 +916,37 @@ local function Cuerpo()
     end
     return estado .. ',,,', {}
 end
-local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo}
+-- Mejoras activas del jugador (comida, frascos, bendiciones). C_UnitAuras.GetAuraDataByIndex con filtro HELPFUL, campos
+-- que lee BuffFrame.lua de la rama forever (name, icon, applications, duration, expirationTime, spellId). La API las
+-- vuelve secretas con las auras restringidas (combate): ahí se posterga y se pide de nuevo con PLAYER_REGEN_ENABLED.
+-- «vence» va en hora del servidor redondeada a 10 s, como hogar, para no reenviar en cada tic; 0 = sin vencimiento.
+local MAX_AURAS = 40
+local aurasEnCombate = false
+local function Auras()
+    if not (C_UnitAuras and C_UnitAuras.GetAuraDataByIndex) then return '', {} end
+    if InCombatLockdown and Limpiar(InCombatLockdown()) == true then
+        aurasEnCombate = true
+        return nil
+    end
+    local ahora, servidor = Real(GetTime()), Numero(GetServerTime())
+    local registros = {}
+    for i = 1, MAX_AURAS do
+        local ok, aura = pcall(C_UnitAuras.GetAuraDataByIndex, 'player', i, 'HELPFUL')
+        aura = ok and Limpiar(aura)
+        if type(aura) ~= 'table' then break end
+        local duracion, vence = Real(aura.duration), Real(aura.expirationTime)
+        local epoch = ''
+        if duracion == 0 or vence == 0 then
+            epoch = 0
+        elseif duracion and vence and ahora and servidor then
+            epoch = math.floor((servidor + math.max(0, vence - ahora)) / 10 + 0.5) * 10
+        end
+        registros[#registros + 1] = table.concat({Numero(aura.spellId) or '', P.Escape(P.Recortar(Texto(aura.name) or '', 80)),
+            Numero(aura.icon) or '', Numero(aura.applications) or '', duracion and math.floor(duracion + 0.5) or '', epoch}, ',')
+    end
+    return tostring(#registros), registros
+end
+local fotos = {mail=Correo, hello=Hello, bags=Bolsas, bank=Banco, equip=Equipo, char=Personaje, look=ns.Look, pos=Posicion, quest=Misiones, dest=Destino, log=Registro, chat=Chat, inst=Instancia, taxi=Taxi, dur=Durabilidad, ruta=Ruta, hogar=Hogar, skill=Habilidades, rep=Reputaciones, grupo=Grupo, alts=Alts, monedas=Monedas, cuerpo=Cuerpo, auras=Auras}
 ns.fotos = fotos -- Para la prueba que cruza tipos y fotos.
 -- Tipos que el jugador apagó con /wowc tipo <nombre> off (WOWCompanionDB.apagados). hello no se apaga: la app lo usa para
 -- saber que el addon está vivo y qué versión tiene.
@@ -1194,7 +1224,9 @@ end
 events:On('USER_WAYPOINT_UPDATED', function() Pedir('event', 'ruta') end)
 events:On('PLAYER_REGEN_ENABLED', function()
     if rutaEnCombate then rutaEnCombate = false; Pedir('event', 'ruta') end
+    if aurasEnCombate then aurasEnCombate = false; Pedir('event', 'auras') end
 end)
+events:On('UNIT_AURA', function(unidad) if Texto(unidad) == 'player' then Pedir('event', 'auras') end end)
 events:On('SKILL_LINES_CHANGED', function() Pedir('event', 'skill') end)
 events:On('UPDATE_FACTION', function() Pedir('event', 'rep') end)
 events:On('CURRENCY_DISPLAY_UPDATE', function() Pedir('event', 'monedas') end)

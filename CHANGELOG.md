@@ -2,16 +2,11 @@
 
 ## 0.15.2
 
-- `/wowc tipo <nombre> off` deja de mandarle a la app ese dato (por ejemplo `alts` o `grupo`); `/wowc tipos` lista cuáles están apagados.
-- La app recibe tu experiencia descansada y si estás descansando en una posada o ciudad.
-- La app recibe la lista de tus personajes con su clase, nivel y oro, para sumar el oro de la cuenta. Cada personaje aparece después de conectarse una vez con esta versión.
-- La app ve quién está en tu grupo o banda: clase, nivel, si está conectado y si murió.
-- La app recibe tus reputaciones, con lo que falta para el próximo nivel.
-- La app recibe tus profesiones, armas e idiomas con su nivel.
-- La app sabe dónde está atada tu piedra de hogar y cuándo vuelve a estar lista.
+- La app dibuja el camino hasta tu destino (la flecha de TomTom o el punto que marcás en el mapa) con el próximo paso. Lo calcula FarstriderLib y, si no lo tenés, ShortestPathForever.
+- Datos nuevos para la app: piedra de hogar (dónde está atada y cuándo vuelve a estar lista), profesiones, reputaciones, integrantes del grupo o la banda, experiencia descansada y tus personajes con su oro. Cada personaje aparece después de conectarse una vez con esta versión.
+- `/wowc tipo <nombre> off` deja de mandar ese dato, por ejemplo `alts` o `grupo`. `/wowc tipos` muestra cuáles están apagados.
 - `/wowc status` muestra de dónde salió la última ruta y cuánto tardó en calcularse.
-- La app recibe el camino hasta tu destino (flecha de TomTom o punto marcado en el mapa) para dibujarlo con el próximo paso. Lo calcula FarstriderLib; sin FarstriderLib, usa el viaje de ShortestPathForever.
-- Una vez por cuenta, un mensaje en el chat cuenta dónde dejar un comentario o reportar un error. También sale al pie de la ayuda de `/wowc`.
+- Una vez por cuenta, un mensaje en el chat dice dónde dejar un comentario o reportar un error. También aparece al pie de la ayuda de `/wowc`.
 
 ## 0.15.1
 

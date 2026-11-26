@@ -1118,8 +1118,9 @@ test('taxi manda la ruta al despegar y la borra al aterrizar', function()
         {[7]={3, 9, 7}}, function(Volar)
         iniciar(); igual(TaxiPayload(), ',#')
         Volar(7); FAKE.Advance(1)
-        igual(TaxiPayload(), '1414,Orgrimmar,,#80:0.6000:0.5000;25:0.5000:0.4500;23:0.5500:0.3000')
-        FAKE.taxi = true; FAKE.Event('UNIT_FLAGS', 'player'); FAKE.Advance(20); igual(#FAKE.Photos('taxi'), 2)
+        igual(TaxiPayload(), '1414,Orgrimmar,,,#80:0.6000:0.5000;25:0.5000:0.4500;23:0.5500:0.3000')
+        FAKE.taxi = true; FAKE.Event('UNIT_FLAGS', 'player'); FAKE.Advance(20); igual(#FAKE.Photos('taxi'), 3)
+        igual(TaxiPayload(), '1414,Orgrimmar,,,1795366800#80:0.6000:0.5000;25:0.5000:0.4500;23:0.5500:0.3000')
         FAKE.taxi = false; FAKE.Event('PLAYER_CONTROL_GAINED'); FAKE.Advance(1); igual(TaxiPayload(), ',#')
     end)
 end)
@@ -1127,7 +1128,7 @@ test('taxi que no arranca se borra a los 10 s; nodos secretos no mandan ruta', f
     ConVuelos({Nodo(80, 3, 'Ratchet', 0.6, 0.5), Nodo(23, 7, 'Orgrimmar', 0.55, 0.3), {nodeID=FAKE.secret, slotIndex=9}},
         {[7]={3, 7}, [9]={3, 9}}, function(Volar)
         iniciar()
-        Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,,#80:0.6000:0.5000;23:0.5500:0.3000')
+        Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,,,#80:0.6000:0.5000;23:0.5500:0.3000')
         FAKE.Advance(10); igual(TaxiPayload(), ',#')
         Volar(9); FAKE.Advance(1); igual(#FAKE.Photos('taxi'), 3)
     end)
@@ -1187,8 +1188,8 @@ test('ruta manda meta, tiempo y tramos con el mapa de cada punta', function()
     ConSPF(function(spf)
         iniciar(); igual(RutaPayload(), ',,#')
         spf.viaje = Viaje(); spf.cb({started=true}); FAKE.Advance(2)
-        igual(RutaPayload(), 'Orgrimmar\\c Valle,312,spf#walk:1411:0.1000:0.2000:1411:0.3000:0.4000:40:Caminá al maestro de vuelo;'
-            .. 'flight:1411:0.3000:0.4000:1454:0.4500:0.6300:272:Volá a Orgrimmar\\s Durotar;portal:::::::0:Sin lugar')
+        igual(RutaPayload(), 'Orgrimmar\\c Valle,312,spf,2#walk:1411:0.1000:0.2000:1411:0.3000:0.4000:40:::Caminá al maestro de vuelo;'
+            .. 'flight:1411:0.3000:0.4000:1454:0.4500:0.6300:272:::Volá a Orgrimmar\\s Durotar;portal:::::::0:::Sin lugar')
         local antes = #FAKE.Photos('ruta')
         spf.cb({guidance=true}); FAKE.Advance(2); igual(#FAKE.Photos('ruta'), antes)
         spf.cb({replan=true}); FAKE.Advance(2); igual(#FAKE.Photos('ruta'), antes)
@@ -1199,7 +1200,7 @@ test('ruta cargando se reintenta y con valores secretos los deja vacíos', funct
     ConSPF(function(spf)
         spf.motivo = 'loading'; iniciar(); igual(#FAKE.Photos('ruta'), 0)
         local v = Viaje(); v.secondsLeft = FAKE.secret; v.legs = {{mode='walk', text=FAKE.secret, seconds=5, from={map=FAKE.secret, x=0.1, y=0.2}}}
-        spf.viaje = v; FAKE.Advance(3); igual(RutaPayload(), 'Orgrimmar\\c Valle,,spf#walk:::::::5:')
+        spf.viaje = v; FAKE.Advance(3); igual(RutaPayload(), 'Orgrimmar\\c Valle,,spf,2#walk:::::::5:::')
     end)
 end)
 
@@ -1239,8 +1240,8 @@ local function ConFSL(fn)
     C_Map.GetMapPosFromWorldPos, C_Map.HasUserWaypoint, C_Map.GetUserWaypoint = mapaAntes, waypoint, nil
     if not ok then error(err, 0) end
 end
-local RUTA_FSL = 'Orgrimmar,270,fsl#walk:1411:0.1000:0.2000:1411:0.3000:0.4000:20:Caminá a Cruce: Durotar;'
-    .. 'flight:1411:0.3000:0.4000:1454:0.4500:0.6300:250:Volá a Orgrimmar;'
+local RUTA_FSL = 'Orgrimmar,,fsl,2#walk:1411:0.1000:0.2000:1411:0.3000:0.4000::::Caminá a Cruce: Durotar;'
+    .. 'flight:1411:0.3000:0.4000:1454:0.4500:0.6300::::Volá a Orgrimmar;'
     .. 'punto:1411:0.1000:0.2000;punto:1411:0.3000:0.4000;punto:1414:0.1000:0.2000;punto:1454:0.4500:0.6300'
 test('ruta con FarstriderLib va a la flecha de TomTom con tramos y puntos', function()
     ConFSL(function(fsl)
@@ -1267,13 +1268,12 @@ test('ruta con FarstriderLib usa el punto del mapa y sin destino ni SPF manda va
         FAKE.Event('USER_WAYPOINT_UPDATED'); FAKE.Advance(2); igual(RutaPayload(), ',,#')
     end)
 end)
-test('ruta con FarstriderLib sin camino cae en ShortestPathForever', function()
+test('ruta con un viaje de ShortestPathForever sale de SPF aunque FarstriderLib tenga camino', function()
     ConFSL(function(fsl)
-        fsl.sinCamino = true
         ConSPF(function(spf)
             spf.viaje = Viaje(); iniciar()
-            igual(fsl.pedidos[1][1], 1411)
-            assert(RutaPayload():find(',312,spf#walk:', 1, true))
+            igual(#fsl.pedidos, 0)
+            assert(RutaPayload():find(',312,spf,2#walk:', 1, true))
         end)
     end)
 end)
@@ -1526,7 +1526,7 @@ test('ruta con FarstriderLib no calcula en combate y recalcula al salir', functi
         local ok, err = pcall(function()
             iniciar(); FAKE.Advance(10); igual(#fsl.pedidos, 0); igual(#FAKE.Photos('ruta'), 0)
             combate = false; FAKE.Event('PLAYER_REGEN_ENABLED'); FAKE.Advance(2)
-            igual(#fsl.pedidos, 1); assert(RutaPayload():find(',fsl#', 1, true))
+            igual(#fsl.pedidos, 1); assert(RutaPayload():find(',fsl,2#', 1, true))
             FAKE.Event('PLAYER_REGEN_ENABLED'); FAKE.Advance(2); igual(#fsl.pedidos, 1)
         end)
         InCombatLockdown = nil
@@ -1951,7 +1951,7 @@ end)
 test('taxi acepta un nodo en el borde del mapa', function()
     ConVuelos({NodoTaxi(80, 3, 'Origen', 0, 0.5), NodoTaxi(23, 7, 'Destino', 1, 0.3)}, {[7]={3, 7}}, function(Volar)
         iniciar(); Volar(7); FAKE.Advance(1)
-        igual(TaxiPayload(), '1414,Destino,,#80:0.0000:0.5000;23:1.0000:0.3000')
+        igual(TaxiPayload(), '1414,Destino,,,#80:0.0000:0.5000;23:1.0000:0.3000')
     end)
 end)
 test('quest acepta una misión en el borde del mapa', function()
@@ -2049,7 +2049,7 @@ test('ruta acepta ShortestPathForever con versión 1', function()
     ConSPF(function(spf)
         spf.version = 1
         recargarTips(); spf.viaje = Viaje(); iniciar()
-        assert(RutaPayload():find(',spf#', 1, true), RutaPayload())
+        assert(RutaPayload():find(',spf,2#', 1, true), RutaPayload())
         spf.viaje = nil; spf.cb({ended=true}); FAKE.Advance(2); igual(RutaPayload(), ',,#')
     end)
 end)
@@ -2223,7 +2223,7 @@ test('ruta: con ShortestPathForever solo, WalkPath suma los puntos del primer tr
         ConPie(spf); spf.viaje = Viaje(); iniciar(); FAKE.map, FAKE.x, FAKE.y = 1411, 0.1, 0.2
         spf.cb({replan=true}); FAKE.Advance(2); igual(#spf.pie, 1)
         spf.pie[1].cb(CAMINO); FAKE.Advance(2)
-        assert(RutaPayload():find(';portal:::::::0:Sin lugar;punto:1411:0.1000:0.2000;punto:1411:0.2000:0.3500;punto:1411:0.3000:0.4000$'), RutaPayload())
+        assert(RutaPayload():find(';portal:::::::0:::Sin lugar;punto:1411:0.1000:0.2000;punto:1411:0.2000:0.3500;punto:1411:0.3000:0.4000$'), RutaPayload())
     end)
 end)
 test('ruta: la respuesta de WalkPath se usa aunque el jugador se haya movido mientras la calculaba', function()
@@ -2257,12 +2257,40 @@ test('taxi manda la duración que aprendió KnuUI: exacta, de vuelta como aprox 
         ElvUI = {{global={KnuUIFlights={['Ratchet, Los Baldíos>Orgrimmar, Durotar']=212.4, ['El Cruce, Los Baldíos>Ratchet, Los Baldíos']=95}}}}
         local ok, err = pcall(function()
             iniciar()
-            Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,212,exacto#80:0.6000:0.5000;23:0.5500:0.3000')
-            FAKE.Advance(10); Volar(9); FAKE.Advance(1); igual(TaxiPayload(), '1414,El Cruce,95,aprox#80:0.6000:0.5000;25:0.5000:0.4500')
+            Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,212,exacto,#80:0.6000:0.5000;23:0.5500:0.3000')
+            FAKE.Advance(10); Volar(9); FAKE.Advance(1); igual(TaxiPayload(), '1414,El Cruce,95,aprox,#80:0.6000:0.5000;25:0.5000:0.4500')
             ElvUI[1].global.KnuUIFlights = {}
-            FAKE.Advance(10); Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,,#80:0.6000:0.5000;23:0.5500:0.3000')
+            FAKE.Advance(10); Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,,,#80:0.6000:0.5000;23:0.5500:0.3000')
         end)
         NumTaxiNodes, TaxiNodeGetType, TaxiNodeName, ElvUI = nil, nil, nil, nil
+        if not ok then error(err, 0) end
+    end)
+end)
+
+test('ruta con SPF: espera de cada tramo desde EstimateDetail si los tramos coinciden; total vacío si falta un tiempo', function()
+    ConSPF(function(spf)
+        local detalle = {legs={{mode='walk', seconds=40}, {mode='flight', seconds=272, wait=90}, {mode='portal', seconds=0}}}
+        spf.EstimateDetail = function(m1, x1, y1, m2, x2, y2)
+            igual(m1, 1411); igual(x1, 0.1); igual(m2, 1411); igual(x2, 0.5); return detalle
+        end
+        spf.viaje = Viaje(); iniciar(); FAKE.map, FAKE.x, FAKE.y = 1411, 0.1, 0.2
+        spf.cb({replan=true}); FAKE.Advance(2)
+        igual(RutaPayload(), 'Orgrimmar\\c Valle,312,spf,2#walk:1411:0.1000:0.2000:1411:0.3000:0.4000:40:::Caminá al maestro de vuelo;'
+            .. 'flight:1411:0.3000:0.4000:1454:0.4500:0.6300:272:90::Volá a Orgrimmar\\s Durotar;portal:::::::0:::Sin lugar')
+        detalle.legs[3].mode = 'boat'; spf.cb({replan=true}); FAKE.Advance(2)
+        assert(RutaPayload():find(':272:::Volá', 1, true), RutaPayload())
+        spf.viaje.legs[1].seconds = nil; spf.cb({replan=true}); FAKE.Advance(2)
+        igual(RutaPayload():sub(1, 70), ('Orgrimmar\\c Valle,,spf,2#walk:1411:0.1000:0.2000:1411:0.3000:0.4000::::'):sub(1, 70))
+    end)
+end)
+test('taxi sin KnuUI usa el tramo de vuelo de SPF como aprox', function()
+    ConVuelos({NodoVuelo(80, 3, 'Ratchet', 0.6, 0.5), NodoVuelo(23, 7, 'Orgrimmar', 0.55, 0.3)}, {[7]={3, 7}}, function(Volar)
+        ShortestPathForever = {API={EstimateDetail=function(m1, x1, y1, m2, x2, y2)
+            igual(m1, 1414); igual(x1, 0.6); igual(y2, 0.3); return {legs={{mode='walk', seconds=5}, {mode='flight', seconds=180.6}}} end}}
+        local ok, err = pcall(function()
+            iniciar(); Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,181,aprox,#80:0.6000:0.5000;23:0.5500:0.3000')
+        end)
+        ShortestPathForever = nil
         if not ok then error(err, 0) end
     end)
 end)

@@ -72,24 +72,27 @@ Se lee con `C_TooltipInfo` (`GetBagItem`, `GetInventoryItem` o `GetHyperlink` se
 
 ### taxi (0.15.1; duración desde 0.15.4)
 
-`uiMapID,destino,segundos,exacto|aprox#nodeID:x:y;…`, con los nodos del vuelo desde el origen hasta el destino. Al aterrizar, o si el vuelo no arranca en 10 s: `,#`.
+`uiMapID,destino,segundos,calidad,despegue#nodeID:x:y;…`, con los nodos del vuelo desde el origen hasta el destino. Al aterrizar, o si el vuelo no arranca en 10 s: `,#`.
 
-- `segundos`: duración total del vuelo que midió KnuUI (`E.global.KnuUIFlights["origen>destino"]`, `KnuUI/Flight.lua`), con los nombres de `TaxiNodeName` del nodo `CURRENT` y del destino. `exacto` si es la de ese tramo; `aprox` si sólo está la de vuelta (`destino>origen`).
-- Sin KnuUI o sin tiempo aprendido: `uiMapID,destino,,#…`. El juego no da el tiempo que falta.
+- `segundos`: duración total del vuelo. Primero la que midió KnuUI (`E.global.KnuUIFlights["origen>destino"]`, `KnuUI/Flight.lua`, con los nombres de `TaxiNodeName` del nodo `CURRENT` y del destino), con `calidad` `exacto`. Si no está, el tramo `flight` de `ShortestPathForever.API.EstimateDetail` entre los dos nodos; si tampoco, la de vuelta de KnuUI (`destino>origen`). Esas dos van con `aprox`. Sin ninguna: `segundos` y `calidad` vacíos.
+- `despegue`: `GetServerTime()` del momento en que `UnitOnTaxi('player')` pasa a verdadero (como KnuUI). Vacío hasta despegar; al despegar se reenvía la foto.
 
 ### dur (0.15.1)
 
 `slot:actual:máximo;…#`, sólo con los slots 1 a 19 que tienen durabilidad. Sin nada: `#`. Se manda con `UPDATE_INVENTORY_DURABILITY` y `PLAYER_EQUIPMENT_CHANGED`.
 
-### ruta (0.15.2)
+### ruta (0.15.2; versión 2 desde 0.15.4)
 
-Encabezado `destino,segundosTotales,fuente`, con `fuente` igual a `fsl` (FarstriderLib) o `spf` (ShortestPathForever). Sin ruta: `,,#`.
+Encabezado `destino,segundosTotales,fuente,2`, con `fuente` igual a `fsl` (FarstriderLib) o `spf` (ShortestPathForever). El `2` dice que los tramos tienen 11 campos. Sin ruta: `,,#`.
 
-Registros de tramo, 9 campos separados por `:`:
+Registros de tramo, 11 campos separados por `:`; el texto va último porque puede tener `:`:
 
 ```
-modo:mapa1:x1:y1:mapa2:x2:y2:segundos:texto
+modo:mapa1:x1:y1:mapa2:x2:y2:segundos:espera:calidad:texto
 ```
+
+- Con un viaje activo de ShortestPathForever (`API.Journey`), la ruta sale de SPF: textos en el idioma del juego y `segundos` del tramo con la espera incluida. `espera` sale del `wait` de `API.EstimateDetail` (jugador a meta) sólo si sus tramos coinciden en cantidad y modo con los del viaje; si no, vacía. `calidad` va vacía: la API pública de SPF no dice si un tiempo es estimado. `segundosTotales` es `secondsLeft` del viaje, vacío si algún tramo no tiene segundos.
+- Sin viaje de SPF, la ruta sale de FarstriderLib con `segundos`, `espera`, `calidad` y `segundosTotales` vacíos: lo que da FarstriderLib es un costo, no un tiempo.
 
 - `modo` con `fsl`: `walk`, `flight`, `portal`, `boat`, `zeppelin`, `item`, `spell`, `leave` (salir de la instancia) o `tram`. Con `spf`, los modos de su API.
 - Con `fsl`, la punta 1 es dónde se hace el paso y la punta 2 dónde termina.

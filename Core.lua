@@ -602,22 +602,35 @@ local function NodoTaxi(nodo)
 end
 -- Duración del vuelo que aprendió KnuUI (KnuUI/Flight.lua): E.global.KnuUIFlights["origen>destino"] de ElvUI, con los
 -- nombres de TaxiNodeName del nodo CURRENT y del destino. Sin esa clave usa la de vuelta y la marca aprox, como KnuUI.
-local function DuracionKnuUI(destino)
+local function TiemposKnuUI(destino)
     local E = type(ElvUI) == 'table' and Limpiar(ElvUI[1])
     local global = type(E) == 'table' and Limpiar(E.global)
     local tiempos = type(global) == 'table' and Limpiar(global.KnuUIFlights)
-    if type(tiempos) ~= 'table' or not (NumTaxiNodes and TaxiNodeGetType and TaxiNodeName) then return '', '' end
+    if type(tiempos) ~= 'table' or not (NumTaxiNodes and TaxiNodeGetType and TaxiNodeName) then return nil end
     local origen
     for i = 1, Numero(NumTaxiNodes()) or 0 do
         if Texto(TaxiNodeGetType(i)) == 'CURRENT' then origen = Texto(TaxiNodeName(i)) break end
     end
     local hasta = Texto(TaxiNodeName(destino))
-    if not (origen and hasta) then return '', '' end
-    local ida = Real(tiempos[origen .. '>' .. hasta])
-    if ida and ida > 0 then return math.floor(ida + 0.5), 'exacto' end
-    local vuelta = Real(tiempos[hasta .. '>' .. origen])
-    if vuelta and vuelta > 0 then return math.floor(vuelta + 0.5), 'aprox' end
-    return '', ''
+    if not (origen and hasta) then return nil end
+    local ida, vuelta = Real(tiempos[origen .. '>' .. hasta]), Real(tiempos[hasta .. '>' .. origen])
+    return ida and ida > 0 and ida or nil, vuelta and vuelta > 0 and vuelta or nil
+end
+-- Tramo de vuelo de ShortestPathForever.API.EstimateDetail entre los dos nodos (sale de sus tiempos de InFlight).
+local function DuracionSPF(mapa, origen, destino)
+    local spf = type(ShortestPathForever) == 'table' and Limpiar(ShortestPathForever.API)
+    if type(spf) ~= 'table' or type(spf.EstimateDetail) ~= 'function' or not (origen and destino) then return nil end
+    local ok, detalle = pcall(spf.EstimateDetail, mapa, origen.x, origen.y, mapa, destino.x, destino.y)
+    detalle = ok and Limpiar(detalle)
+    local legs = type(detalle) == 'table' and Limpiar(detalle.legs)
+    if type(legs) ~= 'table' then return nil end
+    for i = 1, #legs do
+        local leg = Limpiar(legs[i])
+        if type(leg) == 'table' and Texto(leg.mode) == 'flight' then
+            local segundos = Real(leg.seconds)
+            return segundos and segundos > 0 and segundos or nil
+        end
+    end
 end
 local function ArmarVuelo(destino)
     destino = Numero(destino)
@@ -644,22 +657,37 @@ local function ArmarVuelo(destino)
         registros[#registros + 1] = table.concat({n.id, (string.format('%.4f', n.x):gsub(',', '.')), (string.format('%.4f', n.y):gsub(',', '.'))}, ':')
     end
     local final = porSlot[destino]
-    local ok, segundos, calidad = pcall(DuracionKnuUI, destino)
-    if not ok then segundos, calidad = '', '' end
-    return {cab=table.concat({mapa, P.Escape(P.Recortar(final and final.nombre or '', 120)), segundos, calidad}, ','), registros=registros}
+    -- Duración: la de KnuUI (exacto); si no, la de SPF y después la de vuelta de KnuUI (aprox).
+    local ok, ida, vuelta = pcall(TiemposKnuUI, destino)
+    if not ok then ida, vuelta = nil, nil end
+    local segundos, calidad = ida, 'exacto'
+    if not segundos then
+        local okS, spf = pcall(DuracionSPF, mapa, #slots > 1 and porSlot[slots[1]] or nil, final)
+        segundos, calidad = okS and spf or vuelta, 'aprox'
+    end
+    return {nombre=P.Escape(P.Recortar(final and final.nombre or '', 120)), mapa=mapa, registros=registros,
+        segundos=segundos and math.floor(segundos + 0.5) or '', calidad=segundos and calidad or ''}
 end
 local function RevisarVuelo()
     if not vuelo then return end
     local enTaxi = Limpiar(UnitOnTaxi('player')) == true
-    if enTaxi then vueloEnAire = true return end
+    if enTaxi then
+        if not vueloEnAire then
+            vueloEnAire = true
+            vuelo.despegue = GetServerTime and Numero(GetServerTime()) or nil
+            Pedir('event', 'taxi')
+        end
+        return
+    end
     if vueloEnAire or GetTime() - (vueloInicio or 0) >= 10 then
         vuelo, vueloEnAire = nil, false
         Pedir('event', 'taxi')
     end
 end
+-- mapa,destino,segundos,calidad,despegue: despegue es GetServerTime() al ver UnitOnTaxi (como KnuUI Flight.lua:185).
 local function Taxi()
     if not vuelo then return ',', {} end
-    return vuelo.cab, vuelo.registros
+    return table.concat({vuelo.mapa, vuelo.nombre, vuelo.segundos, vuelo.calidad, vuelo.despegue or ''}, ','), vuelo.registros
 end
 -- Durabilidad del equipo para que la app avise cuándo reparar: slot:actual:máximo de los slots 1 a 19 que la tienen.
 -- GetInventoryItemDurability(slot) existe en la rama forever de wow-ui-source (EquipmentManager.lua, Mainline).
@@ -676,11 +704,22 @@ end
 -- Ruta hasta el destino para que la app la dibuje. Fuente principal FarstriderLib (FarstriderLib_API, Deathwing/FarstriderLib
 -- e884a6b, 1.5.0, toc 16001); respaldo ShortestPathForever (ShortestPathForever.API v1/v2, cjber/shortest-path-forever e154ee6).
 local MAX_TRAMOS, MAX_PUNTOS = 30, 200
+-- Encabezado con 4.º campo «2»: tramos de 11 campos (modo:m1:x1:y1:m2:x2:y2:segundos:espera:calidad:texto), acordado con la app.
+local VERSION_RUTA = 2
 -- EdgeType de FarstriderLib~Pathfinding.lua, con los nombres de modo de SPF donde coinciden.
 local MODOS_FSL = {[1000]='walk', [1001]='flight', [1002]='portal', [1003]='boat', [1004]='zeppelin', [1005]='item',
     [1006]='spell', [1007]='leave', [1008]='tram'}
 local function Coord(v) return (string.format('%.4f', v):gsub(',', '.')) end
 -- {map, x, y} de SPF o {mapId, pos={x,y}, isUI} de FarstriderLib, en 0-1 sobre su uiMap.
+local function PosJugador()
+    local mapa = C_Map and C_Map.GetBestMapForUnit and Numero(C_Map.GetBestMapForUnit('player'))
+    local punto = mapa and Limpiar(C_Map.GetPlayerMapPosition(mapa, 'player'))
+    if not punto then return nil end
+    local x, y = punto:GetXY()
+    x, y = Real(x), Real(y)
+    if not (x and y) or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
+    return mapa, x, y
+end
 local function Lugar(lugar)
     lugar = Limpiar(lugar)
     if type(lugar) ~= 'table' then return '', '', '' end
@@ -760,8 +799,9 @@ local function RutaFSL(fsl, mapa, x, y, titulo)
                 if #registros < MAX_TRAMOS then
                     local m1, x1, y1 = Lugar(paso.loc)
                     local m2, x2, y2 = Lugar(paso.completionLoc)
+                    -- arista.cost es el costo de FarstriderLib, no un tiempo (el zepelín trae 600 fijos): va vacío.
                     registros[#registros + 1] = table.concat({MODOS_FSL[Numero(arista.locaId)] or '', m1, x1, y1, m2, x2, y2,
-                        math.floor(acumulado + 0.5), P.Escape(P.Recortar(Texto(paso.loca) or '', 120))}, ':')
+                        '', '', '', P.Escape(P.Recortar(Texto(paso.loca) or '', 120))}, ':')
                 end
                 acumulado, k = 0, k + 1
             end
@@ -774,32 +814,56 @@ local function RutaFSL(fsl, mapa, x, y, titulo)
             if punto then registros[#registros + 1], puntos = punto, puntos + 1 end
         end
     end
-    return P.Escape(P.Recortar(titulo, 120)) .. ',' .. math.floor(total + 0.5) .. ',fsl', registros
+    return P.Escape(P.Recortar(titulo, 120)) .. ',,fsl,' .. VERSION_RUTA, registros
 end
-local function RutaSPF(spf)
-    local ok, viaje, motivo = pcall(spf.Journey)
-    if not ok then return ',,', {} end
-    viaje = Limpiar(viaje)
-    if type(viaje) ~= 'table' then
-        if motivo == 'loading' then return nil end -- Se reintenta; el aviso 'replan' vuelve a pedirla.
-        return ',,', {}
+-- Espera de cada tramo: API.EstimateDetail (Core/API.lua:463) del jugador a la meta da `wait` por tramo, pero sin
+-- coordenadas; sólo se usa si sus tramos coinciden en cantidad y modo con los del viaje.
+local function EsperasSPF(spf, meta, tramos)
+    if type(spf.EstimateDetail) ~= 'function' or type(meta) ~= 'table' then return {} end
+    local mapa, x, y = PosJugador()
+    local mm, mx, my = Numero(meta.map), Real(meta.x), Real(meta.y)
+    if not (mapa and mm and mx and my) then return {} end
+    local ok, detalle = pcall(spf.EstimateDetail, mapa, x, y, mm, mx, my)
+    detalle = ok and Limpiar(detalle)
+    local legs = type(detalle) == 'table' and Limpiar(detalle.legs)
+    if type(legs) ~= 'table' or #legs ~= #tramos then return {} end
+    local esperas = {}
+    for i = 1, #legs do
+        local leg, tramo = Limpiar(legs[i]), Limpiar(tramos[i])
+        if type(leg) ~= 'table' or type(tramo) ~= 'table' or Texto(leg.mode) ~= Texto(tramo.mode) then return {} end
+        local espera = Real(leg.wait)
+        esperas[i] = espera and math.floor(espera + 0.5) or ''
     end
+    return esperas
+end
+local function RutaSPF(spf, viaje)
     local meta = Limpiar(viaje.goal)
     local titulo = type(meta) == 'table' and Texto(meta.title) or ''
-    local cab = P.Escape(P.Recortar(titulo, 120)) .. ',' .. (Numero(viaje.secondsLeft) or '') .. ',spf'
-    local registros, tramos = {}, Limpiar(viaje.legs)
-    if type(tramos) == 'table' then
-        for i = 1, math.min(#tramos, MAX_TRAMOS) do
-            local tramo = Limpiar(tramos[i])
-            if type(tramo) == 'table' then
-                local m1, x1, y1 = Lugar(tramo.from)
-                local m2, x2, y2 = Lugar(tramo.to)
-                registros[#registros + 1] = table.concat({P.Escape(Texto(tramo.mode) or ''), m1, x1, y1, m2, x2, y2,
-                    Numero(tramo.seconds) or '', P.Escape(P.Recortar(Texto(tramo.text) or '', 120))}, ':')
-            end
+    local registros, tramos, completo = {}, Limpiar(viaje.legs), true
+    if type(tramos) ~= 'table' then tramos = {} end
+    local esperas = EsperasSPF(spf, meta, tramos)
+    for i = 1, math.min(#tramos, MAX_TRAMOS) do
+        local tramo = Limpiar(tramos[i])
+        if type(tramo) == 'table' then
+            local m1, x1, y1 = Lugar(tramo.from)
+            local m2, x2, y2 = Lugar(tramo.to)
+            local segundos = Numero(tramo.seconds)
+            if not segundos then completo = false end
+            -- SPF no expone si un tiempo es estimado (leg.estimated es interno): la calidad va vacía.
+            registros[#registros + 1] = table.concat({P.Escape(Texto(tramo.mode) or ''), m1, x1, y1, m2, x2, y2,
+                segundos or '', esperas[i] or '', '', P.Escape(P.Recortar(Texto(tramo.text) or '', 120))}, ':')
         end
     end
-    return cab, registros
+    local total = completo and Numero(viaje.secondsLeft) or ''
+    return P.Escape(P.Recortar(titulo, 120)) .. ',' .. total .. ',spf,' .. VERSION_RUTA, registros
+end
+-- Viaje activo de ShortestPathForever: nil y 'loading' mientras carga, para reintentar.
+local function ViajeSPF(spf)
+    local ok, viaje, motivo = pcall(spf.Journey)
+    if not ok then return nil end
+    viaje = Limpiar(viaje)
+    if type(viaje) == 'table' then return viaje end
+    return nil, motivo
 end
 local function APIs()
     local fsl = type(FarstriderLib_API) == 'table' and type(FarstriderLib_API.FindTrailTo) == 'function' and FarstriderLib_API or nil
@@ -821,15 +885,6 @@ end
 -- mismo mapa del mundo); cada waypoint vuelve en el uiMap de su zona.
 local DUENO_PIE = 'KnuCompanion'
 local caminoPie, pedidoPie
-local function PosJugador()
-    local mapa = C_Map and C_Map.GetBestMapForUnit and Numero(C_Map.GetBestMapForUnit('player'))
-    local punto = mapa and Limpiar(C_Map.GetPlayerMapPosition(mapa, 'player'))
-    if not punto then return nil end
-    local x, y = punto:GetXY()
-    x, y = Real(x), Real(y)
-    if not (x and y) or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
-    return mapa, x, y
-end
 local function PedirPie(spf, clave, fin, mapa, x, y)
     pedidoPie = clave
     local function Respuesta(camino)
@@ -887,6 +942,14 @@ local function Ruta()
         rutaEnCombate = true
         return nil
     end
+    -- Con un viaje de ShortestPathForever (KnuUI le pasa cada flecha a API.Navigate) la ruta sale de SPF: textos en el
+    -- idioma del juego y segundos reales. FarstriderLib sólo sin viaje, y sin tiempos.
+    local viaje, motivo
+    if spf then viaje, motivo = ViajeSPF(spf) end
+    if viaje then
+        local cab, registros = Medir('spf', RutaSPF, spf, viaje)
+        return cab, AplicarPie(registros)
+    end
     if fsl then
         local mapa, x, y, titulo = DestinoRuta(spf)
         if mapa then
@@ -894,11 +957,7 @@ local function Ruta()
             if cab then return cab, AplicarPie(registros) end
         end
     end
-    if spf then
-        local cab, registros = Medir('spf', RutaSPF, spf)
-        if cab and registros then registros = AplicarPie(registros) end
-        return cab, registros
-    end
+    if motivo == 'loading' then return nil end -- Se reintenta; el aviso 'replan' vuelve a pedirla.
     return ',,', {}
 end
 -- Piedra de hogar: posada donde está atada, cuándo vuelve a estar lista y si la tenés. HEARTHSTONE_ITEM_ID (6948),

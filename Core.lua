@@ -600,6 +600,25 @@ local function NodoTaxi(nodo)
     if not x or not y or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
     return {id=Numero(nodo.nodeID), slot=Numero(nodo.slotIndex), nombre=Texto(nodo.name), x=x, y=y}
 end
+-- Duración del vuelo que aprendió KnuUI (KnuUI/Flight.lua): E.global.KnuUIFlights["origen>destino"] de ElvUI, con los
+-- nombres de TaxiNodeName del nodo CURRENT y del destino. Sin esa clave usa la de vuelta y la marca aprox, como KnuUI.
+local function DuracionKnuUI(destino)
+    local E = type(ElvUI) == 'table' and Limpiar(ElvUI[1])
+    local global = type(E) == 'table' and Limpiar(E.global)
+    local tiempos = type(global) == 'table' and Limpiar(global.KnuUIFlights)
+    if type(tiempos) ~= 'table' or not (NumTaxiNodes and TaxiNodeGetType and TaxiNodeName) then return '', '' end
+    local origen
+    for i = 1, Numero(NumTaxiNodes()) or 0 do
+        if Texto(TaxiNodeGetType(i)) == 'CURRENT' then origen = Texto(TaxiNodeName(i)) break end
+    end
+    local hasta = Texto(TaxiNodeName(destino))
+    if not (origen and hasta) then return '', '' end
+    local ida = Real(tiempos[origen .. '>' .. hasta])
+    if ida and ida > 0 then return math.floor(ida + 0.5), 'exacto' end
+    local vuelta = Real(tiempos[hasta .. '>' .. origen])
+    if vuelta and vuelta > 0 then return math.floor(vuelta + 0.5), 'aprox' end
+    return '', ''
+end
 local function ArmarVuelo(destino)
     destino = Numero(destino)
     local mapa = GetTaxiMapID and Numero(GetTaxiMapID())
@@ -625,7 +644,9 @@ local function ArmarVuelo(destino)
         registros[#registros + 1] = table.concat({n.id, (string.format('%.4f', n.x):gsub(',', '.')), (string.format('%.4f', n.y):gsub(',', '.'))}, ':')
     end
     local final = porSlot[destino]
-    return {cab=mapa .. ',' .. P.Escape(P.Recortar(final and final.nombre or '', 120)), registros=registros}
+    local ok, segundos, calidad = pcall(DuracionKnuUI, destino)
+    if not ok then segundos, calidad = '', '' end
+    return {cab=table.concat({mapa, P.Escape(P.Recortar(final and final.nombre or '', 120)), segundos, calidad}, ','), registros=registros}
 end
 local function RevisarVuelo()
     if not vuelo then return end

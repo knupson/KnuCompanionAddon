@@ -1098,6 +1098,7 @@ end
 local function Nodo(id, slot, nombre, x, y)
     return {nodeID=id, slotIndex=slot, name=nombre, state=1, position={GetXY=function() return x, y end}}
 end
+local NodoVuelo = Nodo
 local function ConVuelos(nodos, rutas, fn)
     local gancho
     hooksecurefunc = function(nombre, f) igual(nombre, 'TakeTaxiNode'); gancho = f end
@@ -1117,7 +1118,7 @@ test('taxi manda la ruta al despegar y la borra al aterrizar', function()
         {[7]={3, 9, 7}}, function(Volar)
         iniciar(); igual(TaxiPayload(), ',#')
         Volar(7); FAKE.Advance(1)
-        igual(TaxiPayload(), '1414,Orgrimmar#80:0.6000:0.5000;25:0.5000:0.4500;23:0.5500:0.3000')
+        igual(TaxiPayload(), '1414,Orgrimmar,,#80:0.6000:0.5000;25:0.5000:0.4500;23:0.5500:0.3000')
         FAKE.taxi = true; FAKE.Event('UNIT_FLAGS', 'player'); FAKE.Advance(20); igual(#FAKE.Photos('taxi'), 2)
         FAKE.taxi = false; FAKE.Event('PLAYER_CONTROL_GAINED'); FAKE.Advance(1); igual(TaxiPayload(), ',#')
     end)
@@ -1126,7 +1127,7 @@ test('taxi que no arranca se borra a los 10 s; nodos secretos no mandan ruta', f
     ConVuelos({Nodo(80, 3, 'Ratchet', 0.6, 0.5), Nodo(23, 7, 'Orgrimmar', 0.55, 0.3), {nodeID=FAKE.secret, slotIndex=9}},
         {[7]={3, 7}, [9]={3, 9}}, function(Volar)
         iniciar()
-        Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar#80:0.6000:0.5000;23:0.5500:0.3000')
+        Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,,#80:0.6000:0.5000;23:0.5500:0.3000')
         FAKE.Advance(10); igual(TaxiPayload(), ',#')
         Volar(9); FAKE.Advance(1); igual(#FAKE.Photos('taxi'), 3)
     end)
@@ -1950,7 +1951,7 @@ end)
 test('taxi acepta un nodo en el borde del mapa', function()
     ConVuelos({NodoTaxi(80, 3, 'Origen', 0, 0.5), NodoTaxi(23, 7, 'Destino', 1, 0.3)}, {[7]={3, 7}}, function(Volar)
         iniciar(); Volar(7); FAKE.Advance(1)
-        igual(TaxiPayload(), '1414,Destino#80:0.0000:0.5000;23:1.0000:0.3000')
+        igual(TaxiPayload(), '1414,Destino,,#80:0.0000:0.5000;23:1.0000:0.3000')
     end)
 end)
 test('quest acepta una misión en el borde del mapa', function()
@@ -2244,6 +2245,26 @@ test('dest y ruta ignoran el punto intermedio con el que KnuUI guía la flecha',
 end)
 test('ruta: sin posición del jugador no pide WalkPath', function()
     ConSPF(function(spf) ConPie(spf); spf.viaje = Viaje(); iniciar(); FAKE.Advance(3); igual(#spf.pie, 0) end)
+end)
+
+test('taxi manda la duración que aprendió KnuUI: exacta, de vuelta como aprox o vacía', function()
+    ConVuelos({NodoVuelo(80, 3, 'Ratchet', 0.6, 0.5), NodoVuelo(23, 7, 'Orgrimmar', 0.55, 0.3), NodoVuelo(25, 9, 'El Cruce', 0.5, 0.45)},
+        {[7]={3, 7}, [9]={3, 9}}, function(Volar)
+        local nombres = {[3]='Ratchet, Los Baldíos', [7]='Orgrimmar, Durotar', [9]='El Cruce, Los Baldíos'}
+        NumTaxiNodes = function() return 9 end
+        TaxiNodeGetType = function(i) return i == 3 and 'CURRENT' or 'REACHABLE' end
+        TaxiNodeName = function(i) return nombres[i] or '' end
+        ElvUI = {{global={KnuUIFlights={['Ratchet, Los Baldíos>Orgrimmar, Durotar']=212.4, ['El Cruce, Los Baldíos>Ratchet, Los Baldíos']=95}}}}
+        local ok, err = pcall(function()
+            iniciar()
+            Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,212,exacto#80:0.6000:0.5000;23:0.5500:0.3000')
+            FAKE.Advance(10); Volar(9); FAKE.Advance(1); igual(TaxiPayload(), '1414,El Cruce,95,aprox#80:0.6000:0.5000;25:0.5000:0.4500')
+            ElvUI[1].global.KnuUIFlights = {}
+            FAKE.Advance(10); Volar(7); FAKE.Advance(1); igual(TaxiPayload(), '1414,Orgrimmar,,#80:0.6000:0.5000;23:0.5500:0.3000')
+        end)
+        NumTaxiNodes, TaxiNodeGetType, TaxiNodeName, ElvUI = nil, nil, nil, nil
+        if not ok then error(err, 0) end
+    end)
 end)
 
 print(string.format('%d pruebas, %d fallas',total,fallas))

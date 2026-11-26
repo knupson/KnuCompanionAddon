@@ -70,9 +70,12 @@ Se lee con `C_TooltipInfo` (`GetBagItem`, `GetInventoryItem` o `GetHyperlink` se
 
 `instanceID,tipo,nombre#`. Fuera de una instancia: `,none,#`. Con el tipo secreto: `,,#`. Se manda con cada `ZONE_CHANGED*`.
 
-### taxi (0.15.1)
+### taxi (0.15.1; duración desde 0.15.4)
 
-`uiMapID,destino#nodeID:x:y;…`, con los nodos del vuelo desde el origen hasta el destino. Al aterrizar, o si el vuelo no arranca en 10 s: `,#`. El juego no da el tiempo que falta.
+`uiMapID,destino,segundos,exacto|aprox#nodeID:x:y;…`, con los nodos del vuelo desde el origen hasta el destino. Al aterrizar, o si el vuelo no arranca en 10 s: `,#`.
+
+- `segundos`: duración total del vuelo que midió KnuUI (`E.global.KnuUIFlights["origen>destino"]`, `KnuUI/Flight.lua`), con los nombres de `TaxiNodeName` del nodo `CURRENT` y del destino. `exacto` si es la de ese tramo; `aprox` si sólo está la de vuelta (`destino>origen`).
+- Sin KnuUI o sin tiempo aprendido: `uiMapID,destino,,#…`. El juego no da el tiempo que falta.
 
 ### dur (0.15.1)
 

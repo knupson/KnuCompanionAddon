@@ -93,7 +93,7 @@ modo:mapa1:x1:y1:mapa2:x2:y2:segundos:texto
 - Coordenadas 0–1 con 4 decimales. Una punta que no se pudo ubicar va con sus tres campos vacíos.
 - Hasta 30 tramos.
 
-Registros de punto, sólo con `fsl`, después de los tramos y en orden: `punto:mapa:x:y`. Son los nodos del camino completo, hasta 200.
+Registros de punto, después de los tramos y en orden: `punto:mapa:x:y`, hasta 200. Con `fsl` son los nodos del camino completo. Si el primer tramo es `walk` y ShortestPathForever trae `API.WalkPath`, el addon le pide el camino a pie real desde el jugador hasta el final de ese tramo (sobre la malla de SPF, que rodea montañas). Mientras no contesta va la recta; cuando contesta, sus waypoints reemplazan los puntos de ese tramo, cada uno en el uiMap de su zona. Con `spf` sólo hay puntos si WalkPath contestó. Se vuelve a pedir al recalcular la ruta con el jugador a más de 0,01 del inicio del camino anterior.
 
 El destino sale de la flecha de TomTom, del punto marcado en el mapa (`C_Map.GetUserWaypoint`) o de la meta del viaje de ShortestPathForever. Se recalcula al cambiar el destino, al entrar a otra zona (`ZONE_CHANGED_NEW_AREA`), cuando FarstriderLib reconstruye su grafo y con los avisos `started`, `changed`, `ended`, `leg` y `replan` de ShortestPathForever. Nunca en cada curva. Con FarstriderLib no se calcula en combate: se calcula al salir (`PLAYER_REGEN_ENABLED`).
 

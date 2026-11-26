@@ -794,6 +794,70 @@ local function Medir(fuente, fn, ...)
     rutaInfo = {fuente=fuente, ms=debugprofilestop() - inicio, registros=registros and #registros or 0, ok=cab ~= nil}
     return cab, registros
 end
+-- Camino a pie real del primer tramo (el que sale del jugador): ShortestPathForever.API.WalkPath (Core/APIWalks.lua,
+-- SPF 1.45.11) camina sobre su malla, que sabe que las montañas no se atraviesan. Es asíncrona: la respuesta se guarda
+-- y se vuelve a pedir la ruta. Origen y meta van en uiMap 0-1 del mismo continente (WalkPath los pasa al mundo y exige el
+-- mismo mapa del mundo); cada waypoint vuelve en el uiMap de su zona.
+local DUENO_PIE = 'KnuCompanion'
+local caminoPie, pedidoPie
+local function PosJugador()
+    local mapa = C_Map and C_Map.GetBestMapForUnit and Numero(C_Map.GetBestMapForUnit('player'))
+    local punto = mapa and Limpiar(C_Map.GetPlayerMapPosition(mapa, 'player'))
+    if not punto then return nil end
+    local x, y = punto:GetXY()
+    x, y = Real(x), Real(y)
+    if not (x and y) or x < 0 or x > 1 or y < 0 or y > 1 then return nil end
+    return mapa, x, y
+end
+local function PedirPie(spf, clave, fin, mapa, x, y)
+    pedidoPie = clave
+    local function Respuesta(camino)
+        if pedidoPie ~= clave then return end
+        pedidoPie = nil
+        camino = Limpiar(camino)
+        local puntos, waypoints = {}, type(camino) == 'table' and Limpiar(camino.waypoints)
+        if type(waypoints) == 'table' then
+            for i = 1, math.min(#waypoints, MAX_PUNTOS) do
+                local m, px, py = Lugar(waypoints[i])
+                if m ~= '' then puntos[#puntos + 1] = 'punto:' .. m .. ':' .. px .. ':' .. py end
+            end
+        end
+        if #puntos < 2 then caminoPie = nil return end
+        caminoPie = {clave=clave, mapa=mapa, x=x, y=y, puntos=puntos, fresco=true}
+        Pedir('event', 'ruta')
+    end
+    local ok, cancelar = pcall(spf.WalkPath, DUENO_PIE, {map=mapa, x=x, y=y}, fin, Respuesta)
+    if not ok or type(cancelar) ~= 'function' then pedidoPie = nil end
+end
+-- Cambia la recta del primer tramo a pie por el camino de WalkPath: sus waypoints van primero y después los puntos de FSL
+-- que siguen al final de ese tramo.
+local function AplicarPie(registros)
+    local spf = type(ShortestPathForever) == 'table' and Limpiar(ShortestPathForever.API)
+    if type(spf) ~= 'table' or type(spf.WalkPath) ~= 'function' then return registros end
+    local m2, x2, y2 = (registros[1] or ''):match('^walk:[^:]*:[^:]*:[^:]*:([^:]+):([^:]+):([^:]+):')
+    if not m2 then return registros end
+    local clave = m2 .. ':' .. x2 .. ':' .. y2
+    local mapa, x, y = PosJugador()
+    local c = caminoPie
+    if c and c.clave == clave and (c.fresco or (mapa == c.mapa and x and math.abs(x - c.x) < 0.01 and math.abs(y - c.y) < 0.01)) then
+        c.fresco = false
+        local nuevos, puntos = {}, {}
+        for _, r in ipairs(registros) do
+            if r:sub(1, 6) == 'punto:' then puntos[#puntos + 1] = r else nuevos[#nuevos + 1] = r end
+        end
+        for _, p in ipairs(c.puntos) do nuevos[#nuevos + 1] = p end
+        local desde = 2
+        for i, p in ipairs(puntos) do if p == 'punto:' .. clave then desde = i + 1 break end end
+        local cupo = MAX_PUNTOS - #c.puntos
+        for i = desde, #puntos do
+            if cupo <= 0 then break end
+            nuevos[#nuevos + 1], cupo = puntos[i], cupo - 1
+        end
+        return nuevos
+    end
+    if mapa and pedidoPie ~= clave then PedirPie(spf, clave, {map=tonumber(m2), x=tonumber(x2), y=tonumber(y2)}, mapa, x, y) end
+    return registros
+end
 -- FindTrailTo calcula el camino en el momento: en combate se posterga y se pide de nuevo con PLAYER_REGEN_ENABLED.
 local rutaEnCombate = false
 local function Ruta()
@@ -806,10 +870,14 @@ local function Ruta()
         local mapa, x, y, titulo = DestinoRuta(spf)
         if mapa then
             local cab, registros = Medir('fsl', RutaFSL, fsl, mapa, x, y, titulo)
-            if cab then return cab, registros end
+            if cab then return cab, AplicarPie(registros) end
         end
     end
-    if spf then return Medir('spf', RutaSPF, spf) end
+    if spf then
+        local cab, registros = Medir('spf', RutaSPF, spf)
+        if cab and registros then registros = AplicarPie(registros) end
+        return cab, registros
+    end
     return ',,', {}
 end
 -- Piedra de hogar: posada donde está atada, cuándo vuelve a estar lista y si la tenés. HEARTHSTONE_ITEM_ID (6948),

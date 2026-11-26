@@ -2194,5 +2194,48 @@ test('la ayuda termina con el link a los otros addons de KNU', function()
     assert(FAKE.chat[#FAKE.chat]:find('Otros addons de KNU: curseforge.com/members/knupwns/projects', 1, true), FAKE.chat[#FAKE.chat])
 end)
 
+-- WalkPath con la forma de ShortestPathForever.API (Core/APIWalks.lua, 1.45.11): asíncrona, contesta por callback.
+local function ConPie(spf)
+    spf.pie = {}
+    function spf.WalkPath(dueno, desde, hasta, cb) spf.pie[#spf.pie + 1] = {dueno=dueno, desde=desde, hasta=hasta, cb=cb}; return function() end end
+end
+local CAMINO = {waypoints={{map=1411, x=0.1, y=0.2}, {map=1411, x=0.2, y=0.35}, {map=1411, x=0.3, y=0.4}}, yards=300}
+test('ruta: el primer tramo a pie sigue el camino de WalkPath en vez de la recta', function()
+    ConFSL(function(fsl) ConSPF(function(spf) ConPie(spf) ConTomTom(function(flecha)
+        iniciar(); FAKE.map, FAKE.x, FAKE.y = 1411, 0.1, 0.2
+        flecha({1454, 0.45, 0.63, title='Orgrimmar'}); FAKE.Advance(2)
+        igual(RutaPayload(), RUTA_FSL)
+        igual(#spf.pie, 1); igual(spf.pie[1].dueno, 'KnuCompanion')
+        igual(spf.pie[1].desde.map, 1411); igual(spf.pie[1].desde.x, 0.1); igual(spf.pie[1].desde.y, 0.2)
+        igual(spf.pie[1].hasta.map, 1411); igual(spf.pie[1].hasta.x, 0.3); igual(spf.pie[1].hasta.y, 0.4)
+        spf.pie[1].cb(CAMINO); FAKE.Advance(2)
+        igual(RutaPayload(), (RUTA_FSL:gsub('punto:.*$', '')) .. 'punto:1411:0.1000:0.2000;punto:1411:0.2000:0.3500;'
+            .. 'punto:1411:0.3000:0.4000;punto:1414:0.1000:0.2000;punto:1454:0.4500:0.6300')
+        -- Recalcular cerca del inicio reusa el camino; lejos lo pide de nuevo y mientras tanto vuelve la recta.
+        fsl.rebuild(); FAKE.Advance(2); igual(#spf.pie, 1); assert(RutaPayload():find('0.3500', 1, true))
+        FAKE.x = 0.15; fsl.rebuild(); FAKE.Advance(2); igual(#spf.pie, 2); igual(RutaPayload(), RUTA_FSL)
+        spf.pie[2].cb(nil, 'nopath'); FAKE.Advance(2); igual(RutaPayload(), RUTA_FSL)
+    end) end) end)
+end)
+test('ruta: con ShortestPathForever solo, WalkPath suma los puntos del primer tramo a pie', function()
+    ConSPF(function(spf)
+        ConPie(spf); spf.viaje = Viaje(); iniciar(); FAKE.map, FAKE.x, FAKE.y = 1411, 0.1, 0.2
+        spf.cb({replan=true}); FAKE.Advance(2); igual(#spf.pie, 1)
+        spf.pie[1].cb(CAMINO); FAKE.Advance(2)
+        assert(RutaPayload():find(';portal:::::::0:Sin lugar;punto:1411:0.1000:0.2000;punto:1411:0.2000:0.3500;punto:1411:0.3000:0.4000$'), RutaPayload())
+    end)
+end)
+test('ruta: la respuesta de WalkPath se usa aunque el jugador se haya movido mientras la calculaba', function()
+    ConSPF(function(spf)
+        ConPie(spf); spf.viaje = Viaje(); iniciar(); FAKE.map, FAKE.x, FAKE.y = 1411, 0.1, 0.2
+        spf.cb({replan=true}); FAKE.Advance(2); igual(#spf.pie, 1)
+        FAKE.x = 0.2; spf.pie[1].cb(CAMINO); FAKE.Advance(2)
+        assert(RutaPayload():find('punto:1411:0.2000:0.3500', 1, true), RutaPayload()); igual(#spf.pie, 1)
+    end)
+end)
+test('ruta: sin posición del jugador no pide WalkPath', function()
+    ConSPF(function(spf) ConPie(spf); spf.viaje = Viaje(); iniciar(); FAKE.Advance(3); igual(#spf.pie, 0) end)
+end)
+
 print(string.format('%d pruebas, %d fallas',total,fallas))
 os.exit(fallas == 0 and 0 or 1)

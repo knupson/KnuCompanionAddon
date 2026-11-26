@@ -1571,6 +1571,10 @@ end
 -- Se registra al cargar (OptionalDeps: TomTom carga antes) para no perder el destino que restaura al entrar.
 if type(TomTom) == 'table' and type(TomTom.RegisterCallback) == 'function' then
     pcall(TomTom.RegisterCallback, ns, 'ArrowTargetChanged', function(_, uid)
+        -- KnuUI (TomTomRoute.lua) apunta la flecha a la próxima curva de ShortestPathForever con un punto propio
+        -- (from = 'KnuUI') y la devuelve al destino al terminar: ese punto intermedio no es el destino.
+        local punto = Limpiar(uid)
+        if type(punto) == 'table' and Texto(punto.from) == 'KnuUI' then return end
         destinoFlecha = uid
         Pedir('event', 'dest'); Pedir('event', 'ruta')
     end)

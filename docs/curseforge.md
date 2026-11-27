@@ -17,7 +17,7 @@ Website: https://companion.knunet.com
 - Your current target: name, level, elite or rare, and whether it is dead.
 - Your party or raid, and the other characters on this account with their gold. Each character shows up after it logs in once.
 - Navigation: the TomTom arrow target, and the path to your destination if you have FarstriderLib or ShortestPathForever.
-- New mail alert with the senders, and guild, officer, whisper, party, raid and instance chat. General, Trade and the other public channels only if you turn them on.
+- New mail alert with the senders, and guild, officer, whisper, party, raid and instance chat. General, Trade and the other public channels too, unless you turn them off.
 
 The addon writes this to `Logs/General.log` in the game folder and the app reads it from there. The addon does not connect to the internet.
 

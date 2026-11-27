@@ -541,7 +541,8 @@ local canalesChat = {
 }
 local function ChatActivo(evento)
     if not enabled or type(WOWCompanionDB) ~= 'table' or WOWCompanionDB.chat == false then return false end
-    return evento ~= 'CHAT_MSG_CHANNEL' or WOWCompanionDB.chatCanales == true
+    -- Canales públicos prendidos por defecto (pedido del user, 2026-11-27); /wowc chat canales off los apaga.
+    return evento ~= 'CHAT_MSG_CHANNEL' or WOWCompanionDB.chatCanales ~= false
 end
 local function MensajeChat(evento, texto, remitente, _, nombreCanal, _, _, _, _, canalBase, _, lineID)
     if not ChatActivo(evento) then return end
